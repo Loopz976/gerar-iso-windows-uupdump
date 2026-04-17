@@ -11,7 +11,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
     - name: Instalar dependências
       shell: powershell
@@ -37,64 +38,30 @@ jobs:
         New-Item -ItemType Directory -Path "uup\files" -Force
         Copy-Item $aria "uup\files\aria2c.exe" -Force
 
-    # EXECUÇÃO ORIGINAL (INTACTA)
     - name: Executar UUP
       shell: cmd
       working-directory: uup
       run: uup_download_windows.cmd
 
-    # 🔍 DEBUG COMPLETO
-    - name: Listar tudo após execução
-      run: dir uup /s
-
-    # 🔍 LOCALIZAR ISO
     - name: Localizar ISO
       shell: powershell
       run: |
         $iso = Get-ChildItem -Recurse -Filter *.iso | Select-Object -First 1
+        if (!$iso) { Write-Error "ISO não gerada"; exit 1 }
 
-        if (!$iso) {
-          Write-Error "❌ ISO NÃO FOI GERADA"
+        if ($iso.Length -lt 2GB) {
+          Write-Error "ISO inválida ou incompleta"
           exit 1
         }
 
-        Write-Host "ISO encontrada:"
-        $iso.FullName
         Move-Item $iso.FullName WIN11.iso
+        Write-Host "ISO OK: $($iso.FullName)"
 
-    # 🔍 VALIDAR ISO (TAMANHO + EXISTÊNCIA)
-    - name: Validar ISO
-      shell: powershell
-      run: |
-        if (!(Test-Path "WIN11.iso")) {
-          Write-Error "❌ ISO não existe"
-          exit 1
-        }
-
-        $size = (Get-Item WIN11.iso).Length / 1MB
-        Write-Host "Tamanho ISO:" $size "MB"
-
-        if ($size -lt 3000) {
-          Write-Error "❌ ISO muito pequena (erro no build)"
-          exit 1
-        }
-
-    # 🔍 LISTAR ISO
-    - name: Confirmar ISO final
-      run: dir WIN11.iso
-
-    # 🔽 COMPACTAÇÃO
     - name: Compactar ISO (1900MB)
       shell: powershell
       run: |
-        7z a -tzip -v1900m -mx=9 WIN11.zip WIN11.iso
+        7z a -tzip -v1900m WIN11.zip WIN11.iso
 
-    # 🔍 VALIDAR PARTES
-    - name: Validar compactação
-      run: |
-        dir WIN11.zip.*
-
-    # RELEASE ORIGINAL
     - name: Criar Release
       uses: ncipollo/release-action@v1
       with:
