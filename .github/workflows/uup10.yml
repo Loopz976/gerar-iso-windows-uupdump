@@ -1,4 +1,4 @@
-name: VALIDADO - Gerar ISO Windows 11
+name: Gerar ISO Windows 10 (UUP)
 
 on:
   workflow_dispatch:
@@ -7,94 +7,97 @@ permissions:
   contents: write
 
 jobs:
-  build_win11:
+  build_win10:
     runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Instalar dependências
-      run: choco install aria2 7zip -y
+      shell: powershell
+      run: |
+        choco install aria2 -y
+        choco install 7zip -y
 
-    # EXTRAIR
     - name: Extrair UUP
       shell: powershell
       run: |
-        mkdir uup
-        Expand-Archive uup11.zip uup -Force
+        New-Item -ItemType Directory -Path uup -Force
+        Expand-Archive "uup10.zip" -DestinationPath "uup" -Force
 
         if (!(Test-Path "uup\uup_download_windows.cmd")) {
-          Write-Error "Script não encontrado"
+          Write-Error "Script UUP não encontrado!"
           exit 1
         }
 
-    # DEBUG UUP
-    - name: Ver estrutura UUP
-      run: dir uup
-
-    # ARIA2
     - name: Preparar aria2
       shell: powershell
       run: |
         $aria = (Get-Command aria2c).Source
-        mkdir uup\files
-        Copy-Item $aria uup\files\aria2c.exe
+        New-Item -ItemType Directory -Path "uup\files" -Force
+        Copy-Item $aria "uup\files\aria2c.exe" -Force
 
-    # EXECUTAR
+    # EXECUÇÃO ORIGINAL
     - name: Executar UUP
       shell: cmd
       working-directory: uup
       run: uup_download_windows.cmd
 
-    # VALIDAR DOWNLOADS
-    - name: Validar arquivos baixados
-      shell: powershell
-      run: |
-        $files = Get-ChildItem -Recurse uup
-        if ($files.Count -lt 5) {
-          Write-Error "Poucos arquivos baixados - erro UUP"
-          exit 1
-        }
+    # DEBUG
+    - name: Listar tudo após execução
+      run: dir uup /s
 
-    # LOCALIZAR ISO
+    # ISO
     - name: Localizar ISO
       shell: powershell
       run: |
         $iso = Get-ChildItem -Recurse -Filter *.iso | Select-Object -First 1
+
         if (!$iso) {
-          Write-Error "ISO não encontrada"
+          Write-Error "❌ ISO NÃO FOI GERADA"
           exit 1
         }
 
-        Move-Item $iso.FullName WIN11.iso
+        Write-Host "ISO encontrada:"
+        $iso.FullName
+        Move-Item $iso.FullName WIN10.iso
 
     # VALIDAR ISO
     - name: Validar ISO
       shell: powershell
       run: |
-        if (!(Test-Path "WIN11.iso")) {
-          Write-Error "ISO não existe"
+        if (!(Test-Path "WIN10.iso")) {
+          Write-Error "❌ ISO não existe"
           exit 1
         }
 
-        Write-Host "ISO encontrada:"
-        Get-Item WIN11.iso
+        $size = (Get-Item WIN10.iso).Length / 1MB
+        Write-Host "Tamanho ISO:" $size "MB"
+
+        if ($size -lt 3000) {
+          Write-Error "❌ ISO inválida"
+          exit 1
+        }
+
+    - name: Confirmar ISO final
+      run: dir WIN10.iso
 
     # COMPACTAR
-    - name: Compactar ISO
+    - name: Compactar ISO (1900MB)
+      shell: powershell
       run: |
-        7z a -tzip WIN11.zip WIN11.iso -mx=9 -v1900m
+        7z a -tzip -v1900m -mx=9 WIN10.zip WIN10.iso
 
     # VALIDAR PARTES
-    - name: Ver arquivos compactados
+    - name: Validar compactação
       run: |
-        dir WIN11.zip.*
+        dir WIN10.zip.*
 
     # RELEASE
     - name: Criar Release
       uses: ncipollo/release-action@v1
       with:
-        tag: win11-${{ github.run_number }}
-        name: Windows 11 ISO
-        artifacts: WIN11.zip.*
+        tag: win10-${{ github.run_number }}
+        name: Windows 10 ISO
+        artifacts: WIN10.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
