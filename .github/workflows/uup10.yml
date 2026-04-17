@@ -3,6 +3,9 @@ name: Gerar ISO Windows 10 (UUP)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build_win10:
     runs-on: windows-latest
@@ -11,20 +14,20 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Instalar aria2
+    - name: Instalar dependências
       shell: powershell
       run: |
         choco install aria2 -y
+        choco install 7zip -y
 
-    - name: Extrair UUP (Win10)
+    - name: Extrair UUP
       shell: powershell
       run: |
         New-Item -ItemType Directory -Path uup -Force
-        Expand-Archive -Path "uup10.zip" -DestinationPath "uup" -Force
+        Expand-Archive "uup10.zip" -DestinationPath "uup" -Force
 
         if (!(Test-Path "uup\uup_download_windows.cmd")) {
           Write-Error "Script UUP não encontrado!"
-          Get-ChildItem -Recurse
           exit 1
         }
 
@@ -35,37 +38,27 @@ jobs:
         New-Item -ItemType Directory -Path "uup\files" -Force
         Copy-Item $aria "uup\files\aria2c.exe" -Force
 
-        if (!(Test-Path "uup\files\aria2c.exe")) {
-          Write-Error "aria2 não copiado corretamente!"
-          exit 1
-        }
-
     - name: Executar UUP
       shell: cmd
       working-directory: uup
-      run: |
-        uup_download_windows.cmd
+      run: uup_download_windows.cmd
 
-    - name: Encontrar ISO
-      id: findiso
+    - name: Localizar ISO
       shell: powershell
       run: |
         $iso = Get-ChildItem -Recurse -Filter *.iso | Select-Object -First 1
-        if (-not $iso) {
-          Write-Error "ISO não encontrada!"
-          exit 1
-        }
-        echo "iso_path=$($iso.FullName)" >> $env:GITHUB_OUTPUT
+        if (!$iso) { exit 1 }
+        Move-Item $iso.FullName WIN10.iso
 
-    - name: Compactar ISO
+    - name: Compactar ISO (1900MB)
       shell: powershell
       run: |
-        7z a -tzip -v1800m ISO_WIN10.zip "${{ steps.findiso.outputs.iso_path }}"
+        7z a -tzip -v1900m WIN10.zip WIN10.iso
 
     - name: Criar Release
       uses: ncipollo/release-action@v1
       with:
         tag: win10-${{ github.run_number }}
         name: Windows 10 ISO
-        artifacts: ISO_WIN10.zip.*
+        artifacts: WIN10.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
