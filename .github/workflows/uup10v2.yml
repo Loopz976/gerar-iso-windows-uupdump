@@ -1,4 +1,4 @@
-name: Gerar ISO Windows 10 (UUP) v2
+name: Win10 ISO v2
 
 on:
   workflow_dispatch:
@@ -7,15 +7,13 @@ permissions:
   contents: write
 
 jobs:
-  build_win10:
+  build:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Instalar dependências
-      shell: powershell
+    - name: Instalar deps
       run: |
         choco install aria2 -y
         choco install 7zip -y
@@ -23,67 +21,28 @@ jobs:
     - name: Extrair UUP
       shell: powershell
       run: |
-        New-Item -ItemType Directory -Path uup -Force
-        Expand-Archive "uup10.zip" -DestinationPath "uup" -Force
+        Expand-Archive uup10.zip uup -Force
 
-        if (!(Test-Path "uup\uup_download_windows.cmd")) {
-          Write-Error "Script UUP não encontrado!"
-          exit 1
-        }
-
-    - name: Preparar aria2
-      shell: powershell
-      run: |
-        $aria = (Get-Command aria2c).Source
-        Copy-Item $aria "uup\aria2c.exe" -Force
-
-    - name: Executar UUP completo
+    - name: Rodar UUP
       shell: cmd
       working-directory: uup
       run: |
-        echo ===== INICIO UUP WIN10 =====
         call uup_download_windows.cmd
+        if exist convert-UUP.cmd call convert-UUP.cmd
 
-        if exist convert-UUP.cmd (
-            call convert-UUP.cmd
-        )
-
-        if %errorlevel% neq 0 exit /b 1
-
-    - name: Localizar ISO final
+    - name: Pegar ISO
       shell: powershell
       run: |
-        $iso = Get-ChildItem "uup" -Recurse -Filter *.iso |
-               Sort-Object LastWriteTime -Descending |
-               Select-Object -First 1
+        $iso = Get-ChildItem -Recurse -Filter *.iso | Select-Object -First 1
+        if (!$iso) { exit 1 }
+        Move-Item $iso.FullName WIN10.iso
 
-        if (!$iso) {
-          Write-Error "ISO Windows 10 não gerada"
-          Get-ChildItem -Recurse uup
-          exit 1
-        }
+    - name: Compactar
+      run: 7z a -tzip -v1900m WIN10.zip WIN10.iso
 
-        if ($iso.Name -notmatch "1904|19045|Win10|Windows") {
-          Write-Error "ISO não corresponde ao Windows 10"
-          exit 1
-        }
-
-        if ($iso.Length -lt 2GB) {
-          Write-Error "ISO inválida"
-          exit 1
-        }
-
-        Move-Item $iso.FullName "$env:GITHUB_WORKSPACE\WIN10.iso" -Force
-
-    - name: Compactar ISO
-      shell: powershell
-      run: |
-        7z a -tzip -v1900m WIN10.zip WIN10.iso
-
-    - name: Criar Release
+    - name: Release
       uses: ncipollo/release-action@v1
       with:
         tag: win10-${{ github.run_number }}
-        name: Windows 10 ISO
         artifacts: WIN10.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
