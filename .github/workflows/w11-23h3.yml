@@ -131,7 +131,7 @@ jobs:
     - name: Compactar
       shell: cmd
       run: |
-        7z a -tzip -v1900m FINAL.zip "${{ steps.iso.outputs.iso }}"
+        7z a -tzip -v1900m Wi11-23H2-6060-ESD-ISO-W10UI-Update.zip "${{ steps.iso.outputs.iso }}"
 
     - name: Release
       uses: ncipollo/release-action@v1
