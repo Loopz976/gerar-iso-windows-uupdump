@@ -136,7 +136,7 @@ jobs:
     - name: Release
       uses: ncipollo/release-action@v1
       with:
-        tag: build-${{ github.run_number }}
-        name: ISO Final
-        artifacts: FINAL.zip.*
+        tag: Wi11-23H2-6060-ESD-ISO-W10UI-Update-${{ github.run_number }}
+        name: Wi11-23H2-6060-ESD-ISO-W10UI-Update
+        artifacts: Wi11-23H2-6060-ESD-ISO-W10UI-Update.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
