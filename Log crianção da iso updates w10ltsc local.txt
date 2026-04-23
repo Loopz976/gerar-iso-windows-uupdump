@@ -1,0 +1,421 @@
+============================================================
+Running W10UI v10.59
+============================================================
+
+============================================================
+Configured Options...
+============================================================
+
+Net35
+Cleanup
+ResetBase
+WinRE
+wim2esd
+ISO
+
+============================================================
+Copying DVD Drive contents to work directory...
+============================================================
+
+============================================================
+Removing temporary extracted files...
+============================================================
+
+
+============================================================
+Extracting files from update containers (cab/wim)...
+*** This will require some disk space, please be patient ***
+============================================================
+
+1/7: Windows10.0-KB5003791-x64.cab [Enablement]
+2/7: Windows10.0-KB5007401-x64.cab
+3/7: Windows10.0-KB5008575-x64.cab
+4/7: Windows10.0-KB5074207-x64.cab [Setup DU]
+5/7: Windows10.0-KB5082200-x64.cab [LCU]
+6/7: Windows10.0-KB5082241-x64.cab [SafeOS DU]
+7/7: Windows10.0-KB5084130-x64.cab [SSU]
+
+============================================================
+Mounting sources\install.wim - index 1/1
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Mounting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Checking Updates...
+============================================================
+
+============================================================
+Installing servicing stack update...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19044.1288
+
+Processing 1 of 1 - Adding package Package_for_ServicingStack_7183~31bf3856ad364e35~amd64~~19041.7183.1.10
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Installing updates...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19044.1288
+
+Processing 1 of 1 - Adding package Package_for_KB5007401~31bf3856ad364e35~amd64~~19041.1378.1.1
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19044.1288
+
+Processing 1 of 1 - Adding package Package_for_RollupFix~31bf3856ad364e35~amd64~~19041.7184.1.18
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Resetting OS image base...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19044.7184
+
+[=====                      10.0%                          ]
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19044.7184
+
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Adding .NET Framework 3.5 feature...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19044.7184
+
+Enabling feature(s)
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Reinstalling cumulative update(s)...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19044.7184
+
+Processing 1 of 2 - Adding package Package_for_KB5007401~31bf3856ad364e35~amd64~~19041.1378.1.1
+[==========================100.0%==========================]
+Processing 2 of 2 - Adding package Package_for_RollupFix~31bf3856ad364e35~amd64~~19041.7184.1.18
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Updating winre.wim ...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Mounting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.1
+
+Processing 1 of 1 - Adding package Package_for_ServicingStack_7183~31bf3856ad364e35~amd64~~19041.7183.1.10
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.1
+
+Processing 1 of 1 - Adding package Package_for_SafeOSDU~31bf3856ad364e35~amd64~~19041.7177.1.4
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.7177
+
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.7177
+
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image File : F:\Files\winre.wim
+Image Index : 1
+Saving image
+[==========================100.0%==========================]
+Unmounting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Exporting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Adding updated winre.wim ...
+============================================================
+
+        1 arquivo(s) copiado(s).
+
+============================================================
+Unmounting sources\install.wim - index 1/1
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image File : F:\Files\DVD10UI\sources\install.wim
+Image Index : 1
+Saving image
+[==========================100.0%==========================]
+Unmounting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Mounting sources\boot.wim - index 1/2
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Mounting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Checking Updates...
+============================================================
+
+============================================================
+Installing servicing stack update...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.1288
+
+Processing 1 of 1 - Adding package Package_for_ServicingStack_7183~31bf3856ad364e35~amd64~~19041.7183.1.10
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Installing updates...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.1288
+
+Processing 1 of 1 - Adding package Package_for_RollupFix~31bf3856ad364e35~amd64~~19041.7184.1.18
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Resetting WinPE image base...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.7184
+
+[===========================92.4%=====================     ]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.7184
+
+[===========================60.0%==                        ]
+The operation completed successfully.
+
+============================================================
+Unmounting sources\boot.wim - index 1/2
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image File : F:\Files\DVD10UI\sources\boot.wim
+Image Index : 1
+Saving image
+[==========================100.0%==========================]
+Unmounting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Mounting sources\boot.wim - index 2/2
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Mounting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Checking Updates...
+============================================================
+
+============================================================
+Installing servicing stack update...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.1288
+
+Processing 1 of 1 - Adding package Package_for_ServicingStack_7183~31bf3856ad364e35~amd64~~19041.7183.1.10
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Installing updates...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.1288
+
+Processing 1 of 1 - Adding package Package_for_RollupFix~31bf3856ad364e35~amd64~~19041.7184.1.18
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Resetting WinPE image base...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.7184
+
+[==========================100.0%==========================]
+The operation completed successfully.
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image Version: 10.0.19041.7184
+
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Unmounting sources\boot.wim - index 2/2
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Image File : F:\Files\DVD10UI\sources\boot.wim
+Image Index : 2
+Saving image
+[==========================100.0%==========================]
+Unmounting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Rebuilding sources\boot.wim ...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Exporting image
+[==========================100.0%==========================]
+Exporting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Adding setup dynamic update(s)...
+============================================================
+
+Windows10.0-KB5074207-x64.cab
+
+============================================================
+Converting install.wim to install.esd ...
+============================================================
+
+Deployment Image Servicing and Management tool
+Version: 10.0.19041.3636
+
+Exporting image
+[==========================100.0%==========================]
+The operation completed successfully.
+
+============================================================
+Removing temporary extracted files...
+============================================================
+
+
+============================================================
+Creating updated ISO file...
+============================================================
+
+ISO Location:
+"F:\Files"
+100%  4408MB 19044.7184.260411-1655.21H2_RELEASE_SVC_PROD1_CLIENT_X64FRE_PT-BR.iso
+
+============================================================
+   Finished
+============================================================
+
+
+Press 9 or q to exit.
