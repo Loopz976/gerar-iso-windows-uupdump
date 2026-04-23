@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (W10UI FINAL STABLE)
+name: Build Windows 10 LTSC ISO (FAST W10UI)
 
 on:
   workflow_dispatch:
@@ -14,22 +14,34 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # 🔧 TOOLS
     - name: Instalar ferramentas
       shell: cmd
       run: |
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🔥 BAIXAR ISO DIRETA (SEM ERRO)
-    - name: Baixar ISO
+    # 🚀 DOWNLOAD ULTRA RÁPIDO
+    - name: Baixar ISO (aria2 turbo)
       shell: cmd
       run: |
-        curl -L -o windows.iso https://windows.timefa.de/10/ltsc/pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso
+        aria2c ^
+          -x 16 ^
+          -s 16 ^
+          -k 1M ^
+          --file-allocation=none ^
+          --summary-interval=0 ^
+          --max-connection-per-server=16 ^
+          --min-split-size=1M ^
+          --retry-wait=3 ^
+          --max-tries=5 ^
+          -o windows.iso ^
+          https://windows.timefa.de/10/ltsc/pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso
 
         echo ===== VERIFICAR ISO =====
         dir windows.iso
 
-    # 🔥 EXTRAIR ISO
+    # 📦 EXTRAIR ISO
     - name: Extrair ISO
       shell: cmd
       run: |
@@ -48,7 +60,7 @@ jobs:
     - name: Baixar W10UI
       shell: cmd
       run: |
-        curl -L -o W10UI.zip https://tiny.cc/W10UI
+        aria2c -x 8 -s 8 -o W10UI.zip https://tiny.cc/W10UI
         7z x W10UI.zip -y
 
     # 🔽 UUP
@@ -58,7 +70,7 @@ jobs:
         mkdir uup
         7z x uup10ltsc.zip -ouup -y
 
-    - name: Preparar aria2
+    - name: Preparar aria2 (UUP)
       shell: cmd
       run: |
         copy /Y "%ProgramData%\chocolatey\bin\aria2c.exe" uup\aria2c.exe
@@ -68,6 +80,7 @@ jobs:
       working-directory: uup
       run: |
         call uup_download_windows.cmd
+        if %errorlevel% neq 0 exit /b 1
 
     # 🔍 DETECTAR W10UI
     - name: Detectar W10UI
@@ -79,22 +92,25 @@ jobs:
 
         if not defined W10PATH (
           echo ERRO: W10UI nao encontrado
+          dir
           exit /b 1
         )
 
-    # 🔥 PREPARAR (IGUAL SEU PC)
+        echo W10UI encontrado em: %W10PATH%
+
+    # 🔧 PREPARAR
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
         xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
-        REM updates na raiz
+        REM updates na raiz (igual seu método)
         xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
         dir "%W10PATH%\DVD\sources"
 
-    # 🔥 CONFIG AUTO
+    # ⚙️ CONFIG AUTOMÁTICA
     - name: Configurar W10UI
       shell: cmd
       run: |
@@ -109,7 +125,7 @@ jobs:
 
         copy /Y cfg.ini "%W10PATH%\ConvertConfig.ini"
 
-    # 🔥 EXECUTAR
+    # 🚀 EXECUTAR
     - name: Rodar W10UI
       shell: cmd
       run: |
@@ -129,10 +145,11 @@ jobs:
           exit /b 1
         )
 
+        echo ISO FINAL: %ISOFILE%
         move /Y "%ISOFILE%" FINAL.iso
 
     # 📦 COMPACTAR
-    - name: Compactar
+    - name: Compactar ISO
       shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip FINAL.iso
@@ -142,5 +159,6 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         tag: ltsc-${{ github.run_number }}
+        name: Windows 10 LTSC Atualizado
         artifacts: FINAL.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
