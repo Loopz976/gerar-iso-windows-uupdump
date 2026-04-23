@@ -1,0 +1,69 @@
+name: Verificar Versao ISO (Release 7z)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Instalar 7zip
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+
+    - name: Baixar ISO (3 partes)
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc-1288/w10-ltsc-1288.7z.001
+        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc-1288/w10-ltsc-1288.7z.002
+        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc-1288/w10-ltsc-1288.7z.003
+
+    - name: Extrair pacote 7z
+      shell: cmd
+      run: |
+        7z x base.7z.001 -y
+
+    - name: Encontrar ISO correta
+      shell: cmd
+      run: |
+        for /r %%i in (pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso) do (
+          echo ISO encontrada: %%i
+          copy "%%i" win10.iso
+        )
+
+        if not exist win10.iso (
+          echo ERRO: ISO nao encontrada
+          dir /s *.iso
+          exit /b 1
+        )
+
+    - name: Extrair ISO
+      shell: cmd
+      run: |
+        mkdir ISO
+        7z x win10.iso -oISO -y
+
+        if not exist ISO\sources\install.wim (
+          if not exist ISO\sources\install.esd (
+            echo ERRO: install.wim/esd nao encontrado
+            exit /b 1
+          )
+        )
+
+    - name: Verificar versao real
+      shell: cmd
+      run: |
+        echo ==============================
+        echo VERIFICANDO VERSAO REAL
+        echo ==============================
+
+        if exist ISO\sources\install.wim (
+          dism /Get-WimInfo /WimFile:ISO\sources\install.wim
+        ) else (
+          dism /Get-WimInfo /WimFile:ISO\sources\install.esd
+        )
