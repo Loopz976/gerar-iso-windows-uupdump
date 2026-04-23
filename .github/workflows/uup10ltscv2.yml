@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO v2
+name: Build Windows 10 LTSC ISO (W10UI AUTO FIX)
 
 on:
   workflow_dispatch:
@@ -20,14 +20,7 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🔽 BAIXAR W10UI
-    - name: Baixar W10UI
-      shell: cmd
-      run: |
-        curl -L -o W10UI.zip https://tiny.cc/W10UI
-        7z x W10UI.zip -y
-
-    # 🔽 BAIXAR ISO BASE
+    # 🔽 DOWNLOAD ISO BASE (COM VERIFICAÇÃO)
     - name: Baixar ISO base
       shell: cmd
       run: |
@@ -35,25 +28,46 @@ jobs:
         curl -L -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
         curl -L -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
+        echo ===== TAMANHO DOS ARQUIVOS =====
+        dir base.7z.*
+
+    # 🔥 EXTRAIR ISO CORRETAMENTE
     - name: Extrair ISO
       shell: cmd
       run: |
         mkdir ISO
+
+        echo ===== TESTANDO ARQUIVO =====
+        7z t base.7z.001
+
+        echo ===== EXTRAINDO =====
         7z x base.7z.001 -oISO -y
 
-    # 🔧 CORRIGIR ISO DUPLICADA
-    - name: Ajustar ISO
+        echo ===== DEBUG ISO =====
+        dir ISO
+        dir ISO /s
+
+    # 🔥 VALIDAR ISO (CRÍTICO)
+    - name: Validar ISO
       shell: cmd
       run: |
-        if exist ISO\ISO\sources\install.wim (
-          xcopy ISO\ISO\* ISO\ /E /H /C /I /Y
+        if exist ISO\sources\install.wim (
+          echo ISO OK (WIM)
+        ) else (
+          if exist ISO\sources\install.esd (
+            echo ISO OK (ESD)
+          ) else (
+            echo ERRO: ISO nao foi extraida corretamente
+            exit /b 1
+          )
         )
 
-        if not exist ISO\sources\install.wim (
-          echo ERRO: install.wim nao encontrado
-          dir /s ISO
-          exit /b 1
-        )
+    # 🔽 W10UI
+    - name: Baixar W10UI
+      shell: cmd
+      run: |
+        curl -L -o W10UI.zip https://tiny.cc/W10UI
+        7z x W10UI.zip -y
 
     # 🔽 UUP
     - name: Extrair UUP
@@ -84,38 +98,34 @@ jobs:
 
         if not defined W10PATH (
           echo ERRO: W10UI nao encontrado
-          dir
           exit /b 1
         )
 
-        echo W10UI: %W10PATH%
-
-    # 🔥 PREPARAR (IGUAL SEU PC)
+    # 🔥 PREPARAR
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
         xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
-        REM 🔥 AQUI MUDA TUDO (RAIZ)
         xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
         dir "%W10PATH%\DVD\sources"
 
-    # 🔥 CONFIG AUTOMÁTICA (SÓ TARGET)
+    # 🔥 CONFIG AUTO
     - name: Configurar W10UI
       shell: cmd
       run: |
-        echo AutoStart=1> ConvertConfig.ini
-        echo CreateISO=1>> ConvertConfig.ini
-        echo Cleanup=1>> ConvertConfig.ini
-        echo ResetBase=1>> ConvertConfig.ini
-        echo NetFx3=1>> ConvertConfig.ini
-        echo UpdateWinRE=1>> ConvertConfig.ini
-        echo UseESD=1>> ConvertConfig.ini
-        echo DVD=DVD>> ConvertConfig.ini
+        echo AutoStart=1> cfg.ini
+        echo CreateISO=1>> cfg.ini
+        echo Cleanup=1>> cfg.ini
+        echo ResetBase=1>> cfg.ini
+        echo NetFx3=1>> cfg.ini
+        echo UpdateWinRE=1>> cfg.ini
+        echo UseESD=1>> cfg.ini
+        echo DVD=DVD>> cfg.ini
 
-        copy /Y ConvertConfig.ini "%W10PATH%\ConvertConfig.ini"
+        copy /Y cfg.ini "%W10PATH%\ConvertConfig.ini"
 
     # 🔥 EXECUTAR
     - name: Rodar W10UI
@@ -132,7 +142,7 @@ jobs:
         for /r %%i in (*.iso) do set ISOFILE=%%i
 
         if not defined ISOFILE (
-          echo ISO NAO ENCONTRADA
+          echo ISO FINAL NAO ENCONTRADA
           dir /s
           exit /b 1
         )
@@ -150,6 +160,5 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         tag: ltsc-${{ github.run_number }}
-        name: Windows 10 LTSC Atualizado
         artifacts: FINAL.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
