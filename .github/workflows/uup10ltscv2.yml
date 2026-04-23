@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (FINAL FIXED)
+name: Build Windows 10 LTSC (W10UI FINAL OK)
 
 on:
   workflow_dispatch:
@@ -21,76 +21,43 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🚀 DOWNLOAD CORRETO (NOME FORÇADO)
-    - name: Baixar base (fix multipart)
+    # 🚀 DOWNLOAD DAS 3 PARTES (GITHUB)
+    - name: Baixar base
       shell: cmd
       run: |
         aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
-          -o Win10.7z.001 ^
+          -o base.7z.001 ^
           https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001
 
         aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
-          -o Win10.7z.002 ^
+          -o base.7z.002 ^
           https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
 
         aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
-          -o Win10.7z.003 ^
+          -o base.7z.003 ^
           https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-        echo ===== VERIFICAR PARTES =====
-        dir Win10.7z.*
+        echo ===== VERIFICAR =====
+        dir *.7z.*
 
-    # 🔍 TESTAR ARQUIVO (CRÍTICO)
-    - name: Testar integridade
+    # 🔍 TESTAR INTEGRIDADE
+    - name: Testar arquivo
       shell: cmd
       run: |
-        7z t Win10.7z.001
-        if %errorlevel% neq 0 (
-          echo ERRO: arquivo corrompido
-          exit /b 1
-        )
+        7z t base.7z.001
+        if %errorlevel% neq 0 exit /b 1
 
-    # 📦 EXTRAIR CORRETAMENTE
-    - name: Extrair pacote
+    # 📦 EXTRAIR BASE
+    - name: Extrair base
       shell: cmd
       run: |
         mkdir BASE
-        7z x Win10.7z.001 -oBASE -y
+        7z x base.7z.001 -oBASE -y
 
         echo ===== DEBUG BASE =====
-        dir BASE /s
-
-        if not exist BASE (
-          echo ERRO: extracao falhou
-          exit /b 1
-        )
-
-    # 🔍 ENCONTRAR ISO
-    - name: Encontrar ISO
-      shell: cmd
-      run: |
-        for /r BASE %%i in (*.iso) do (
-          echo ISO encontrada: %%i
-          set ISOFILE=%%i
-          goto :found
-        )
-
-        echo ERRO: ISO nao encontrada
-        dir BASE /s
-        exit /b 1
-
-        :found
-
-        mkdir ISO
-        7z x "%ISOFILE%" -oISO -y
-
-        if not exist ISO\sources\install.wim (
-          if not exist ISO\sources\install.esd (
-            echo ERRO: install.wim/esd nao encontrado
-            dir /s ISO
-            exit /b 1
-          )
-        )
+        dir BASE
+        dir BASE\Files
+        dir BASE\Files\ISO
 
     # 🔽 W10UI
     - name: Baixar W10UI
@@ -116,8 +83,9 @@ jobs:
       working-directory: uup
       run: |
         call uup_download_windows.cmd
+        if %errorlevel% neq 0 exit /b 1
 
-    # 🔍 W10UI PATH
+    # 🔍 DETECTAR W10UI
     - name: Detectar W10UI
       shell: cmd
       run: |
@@ -125,17 +93,29 @@ jobs:
           if exist "%%d\W10UI.cmd" set W10PATH=%%d
         )
 
-        if not defined W10PATH exit /b 1
+        if not defined W10PATH (
+          echo ERRO: W10UI nao encontrado
+          dir
+          exit /b 1
+        )
 
-    # 🔧 PREPARAR
+        echo W10UI encontrado em: %W10PATH%
+
+    # 🔥 PREPARAR AMBIENTE (CORRETO)
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
-        xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
+
+        REM BASE JA EXTRAIDA (SEM ISO)
+        xcopy BASE\Files\ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
+
+        REM UPDATES NA RAIZ
         xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
-    # ⚙️ CONFIG
+        dir "%W10PATH%\DVD\sources"
+
+    # ⚙️ CONFIG AUTOMÁTICA
     - name: Configurar W10UI
       shell: cmd
       run: |
@@ -150,7 +130,7 @@ jobs:
 
         copy /Y cfg.ini "%W10PATH%\ConvertConfig.ini"
 
-    # 🚀 RUN
+    # 🚀 EXECUTAR
     - name: Rodar W10UI
       shell: cmd
       run: |
@@ -158,21 +138,32 @@ jobs:
         call W10UI.cmd
         popd
 
-    # 📦 FINAL
+    # 🔍 ISO FINAL
     - name: Localizar ISO final
       shell: cmd
       run: |
         for /r %%i in (*.iso) do set ISOFILE=%%i
+
+        if not defined ISOFILE (
+          echo ERRO: ISO final nao encontrada
+          dir /s
+          exit /b 1
+        )
+
+        echo ISO FINAL: %ISOFILE%
         move /Y "%ISOFILE%" FINAL.iso
 
-    - name: Compactar
+    # 📦 COMPACTAR
+    - name: Compactar ISO
       shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip FINAL.iso
 
-    - name: Release
+    # 🚀 RELEASE
+    - name: Criar Release
       uses: ncipollo/release-action@v1
       with:
         tag: ltsc-${{ github.run_number }}
+        name: Windows 10 LTSC Atualizado
         artifacts: FINAL.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
