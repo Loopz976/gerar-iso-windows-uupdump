@@ -1,4 +1,4 @@
-name: Windows 10 21H2 1288 - ISO-ESD-W10UI
+name: Win 10 21H2 1288 - ISO-ESD-W10UI
 
 on:
   workflow_dispatch:
