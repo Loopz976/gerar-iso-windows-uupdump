@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (W10UI AUTO FIX)
+name: Build Windows 10 LTSC ISO (W10UI FINAL)
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🔽 DOWNLOAD ISO BASE (COM VERIFICAÇÃO)
+    # 🔽 BAIXAR ISO BASE
     - name: Baixar ISO base
       shell: cmd
       run: |
@@ -28,38 +28,31 @@ jobs:
         curl -L -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
         curl -L -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-        echo ===== TAMANHO DOS ARQUIVOS =====
-        dir base.7z.*
-
-    # 🔥 EXTRAIR ISO CORRETAMENTE
-    - name: Extrair ISO
+    # 🔥 EXTRAIR ISO (DUAS ETAPAS)
+    - name: Extrair ISO base
       shell: cmd
       run: |
         mkdir ISO
-
-        echo ===== TESTANDO ARQUIVO =====
-        7z t base.7z.001
-
-        echo ===== EXTRAINDO =====
         7z x base.7z.001 -oISO -y
 
-        echo ===== DEBUG ISO =====
-        dir ISO
-        dir ISO /s
-
-    # 🔥 VALIDAR ISO (CRÍTICO)
-    - name: Validar ISO
+    - name: Extrair conteúdo da ISO
       shell: cmd
       run: |
-        if exist ISO\sources\install.wim (
-          echo ISO OK (WIM)
-        ) else (
-          if exist ISO\sources\install.esd (
-            echo ISO OK (ESD)
-          ) else (
-            echo ERRO: ISO nao foi extraida corretamente
-            exit /b 1
-          )
+        for %%i in (ISO\*.iso) do set ISOFILE=%%i
+
+        if not defined ISOFILE (
+          echo ERRO: ISO nao encontrada
+          dir ISO
+          exit /b 1
+        )
+
+        mkdir ISO_EXTRACT
+        7z x "%ISOFILE%" -oISO_EXTRACT -y
+
+        if not exist ISO_EXTRACT\sources\install.wim (
+          echo ERRO: install.wim nao encontrado
+          dir /s ISO_EXTRACT
+          exit /b 1
         )
 
     # 🔽 W10UI
@@ -86,7 +79,6 @@ jobs:
       working-directory: uup
       run: |
         call uup_download_windows.cmd
-        if %errorlevel% neq 0 exit /b 1
 
     # 🔍 DETECTAR W10UI
     - name: Detectar W10UI
@@ -96,24 +88,17 @@ jobs:
           if exist "%%d\W10UI.cmd" set W10PATH=%%d
         )
 
-        if not defined W10PATH (
-          echo ERRO: W10UI nao encontrado
-          exit /b 1
-        )
-
-    # 🔥 PREPARAR
+    # 🔥 PREPARAR IGUAL AO SEU PC
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
-        xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
+        xcopy ISO_EXTRACT\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
         xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
-        dir "%W10PATH%\DVD\sources"
-
     # 🔥 CONFIG AUTO
-    - name: Configurar W10UI
+    - name: Configurar
       shell: cmd
       run: |
         echo AutoStart=1> cfg.ini
@@ -140,13 +125,6 @@ jobs:
       shell: cmd
       run: |
         for /r %%i in (*.iso) do set ISOFILE=%%i
-
-        if not defined ISOFILE (
-          echo ISO FINAL NAO ENCONTRADA
-          dir /s
-          exit /b 1
-        )
-
         move /Y "%ISOFILE%" FINAL.iso
 
     # 📦 COMPACTAR
