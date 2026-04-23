@@ -1,4 +1,4 @@
-name: Windows 11 23H2 6060 - ISO-ESD-W10UI
+name: Win 11 23H2 6060 - ISO-ESD-W10UI
 
 on:
   workflow_dispatch:
