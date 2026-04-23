@@ -131,12 +131,12 @@ jobs:
     - name: Compactar
       shell: cmd
       run: |
-        7z a -tzip -v1900m W1022H26456ESDISOW10UI.zip "${{ steps.iso.outputs.iso }}"
+        7z a -tzip -v1900m W1022H26456ESDISOW10UI.7z "${{ steps.iso.outputs.iso }}"
 
     - name: Release
       uses: ncipollo/release-action@v1
       with:
         tag: W10-22H2-6456-W10UI-${{ github.run_number }}
         name: Windows 10 22H2 6456 Update ESD-ISO-W10UI
-        artifacts: W1022H26456ESDISOW10UI.zip.*
+        artifacts: W1022H26456ESDISOW10UI.7z.*
         token: ${{ secrets.GITHUB_TOKEN }}
