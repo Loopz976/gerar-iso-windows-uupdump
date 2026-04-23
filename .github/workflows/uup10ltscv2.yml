@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (W10UI AUTO)
+name: Build Windows 10 LTSC ISO v2
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
         mkdir ISO
         7z x base.7z.001 -oISO -y
 
-    # 🔥 CORRIGIR ISO DUPLICADA
+    # 🔧 CORRIGIR ISO DUPLICADA
     - name: Ajustar ISO
       shell: cmd
       run: |
@@ -62,11 +62,6 @@ jobs:
         mkdir uup
         7z x uup10ltsc.zip -ouup -y
 
-        if not exist uup\uup_download_windows.cmd (
-          echo ERRO: Script UUP nao encontrado
-          exit /b 1
-        )
-
     - name: Preparar aria2
       shell: cmd
       run: |
@@ -79,7 +74,7 @@ jobs:
         call uup_download_windows.cmd
         if %errorlevel% neq 0 exit /b 1
 
-    # 🔥 DETECTAR W10UI
+    # 🔍 DETECTAR W10UI
     - name: Detectar W10UI
       shell: cmd
       run: |
@@ -93,38 +88,36 @@ jobs:
           exit /b 1
         )
 
-        echo W10UI encontrado em: %W10PATH%
+        echo W10UI: %W10PATH%
 
-    # 🔥 PREPARAR ESTRUTURA
+    # 🔥 PREPARAR (IGUAL SEU PC)
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
         xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
-        mkdir "%W10PATH%\Files\UUPs"
-        xcopy uup\* "%W10PATH%\Files\UUPs\" /E /H /C /I /Y
+        REM 🔥 AQUI MUDA TUDO (RAIZ)
+        xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
         dir "%W10PATH%\DVD\sources"
 
-    # 🔥 CONFIG AUTOMÁTICA (SIMULA 1 / 2 / 0)
-    - name: Configurar W10UI automático
+    # 🔥 CONFIG AUTOMÁTICA (SÓ TARGET)
+    - name: Configurar W10UI
       shell: cmd
       run: |
         echo AutoStart=1> ConvertConfig.ini
         echo CreateISO=1>> ConvertConfig.ini
-        echo AddUpdates=1>> ConvertConfig.ini
         echo Cleanup=1>> ConvertConfig.ini
         echo ResetBase=1>> ConvertConfig.ini
         echo NetFx3=1>> ConvertConfig.ini
         echo UpdateWinRE=1>> ConvertConfig.ini
         echo UseESD=1>> ConvertConfig.ini
         echo DVD=DVD>> ConvertConfig.ini
-        echo UUPs=Files\UUPs>> ConvertConfig.ini
 
         copy /Y ConvertConfig.ini "%W10PATH%\ConvertConfig.ini"
 
-    # 🔥 EXECUTAR W10UI
+    # 🔥 EXECUTAR
     - name: Rodar W10UI
       shell: cmd
       run: |
@@ -144,11 +137,10 @@ jobs:
           exit /b 1
         )
 
-        echo ISO FINAL: %ISOFILE%
         move /Y "%ISOFILE%" FINAL.iso
 
     # 📦 COMPACTAR
-    - name: Compactar ISO
+    - name: Compactar
       shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip FINAL.iso
