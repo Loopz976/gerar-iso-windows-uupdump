@@ -70,7 +70,7 @@ jobs:
       shell: cmd
       run: |
         mkdir UUP
-        7z x w11-23h2-upp.zip -oUUP -y
+        7z x w10-21h2-upp.zip -oUUP -y
         copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
 
     - name: Baixar updates
@@ -130,12 +130,12 @@ jobs:
     - name: Compactar
       shell: cmd
       run: |
-        7z a -tzip -v1900m FINAL.zip "${{ steps.iso.outputs.iso }}"
+        7z a -tzip -v1900m W1021H21288ESDISOW10UI.zip "${{ steps.iso.outputs.iso }}"
 
     - name: Release
       uses: ncipollo/release-action@v1
       with:
         tag: build-${{ github.run_number }}
-        name: ISO Final
-        artifacts: FINAL.zip.*
+        name: Windows 10 21H2 1288 Update ESD-ISO-W10UI
+        artifacts: W1021H21288ESDISOW10UI.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
