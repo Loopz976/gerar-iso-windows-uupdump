@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC (W10UI FINAL OK)
+name: Build Win10 ISO (W10UI FULL AUTO)
 
 on:
   workflow_dispatch:
@@ -12,158 +12,139 @@ jobs:
     timeout-minutes: 360
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    # 🔧 TOOLS
-    - name: Instalar ferramentas
-      shell: cmd
-      run: |
-        choco install 7zip -y
-        choco install aria2 -y
+      - name: Instalar ferramentas
+        shell: powershell
+        run: |
+          choco install 7zip -y
+          choco install aria2 -y
 
-    # 🚀 DOWNLOAD DAS 3 PARTES (GITHUB)
-    - name: Baixar base
-      shell: cmd
-      run: |
-        aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
-          -o base.7z.001 ^
-          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001
+      - name: Baixar base
+        shell: powershell
+        run: |
+          aria2c -x 16 -s 16 -k 1M --file-allocation=none -o filesw10.zip.001 https://github.com/Loopz976/win10-iso-auto-builder/releases/download/files-win10/filesw10.zip.001
+          aria2c -x 16 -s 16 -k 1M --file-allocation=none -o filesw10.zip.002 https://github.com/Loopz976/win10-iso-auto-builder/releases/download/files-win10/filesw10.zip.002
+          aria2c -x 16 -s 16 -k 1M --file-allocation=none -o filesw10.zip.003 https://github.com/Loopz976/win10-iso-auto-builder/releases/download/files-win10/filesw10.zip.003
 
-        aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
-          -o base.7z.002 ^
-          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
+      - name: Reconstruir ZIP
+        shell: cmd
+        run: |
+          copy /b filesw10.zip.001 + filesw10.zip.002 + filesw10.zip.003 filesw10.zip
+          if not exist filesw10.zip exit /b 1
 
-        aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
-          -o base.7z.003 ^
-          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
+      - name: Extrair base
+        shell: powershell
+        run: |
+          $root = "D:\W10UI"
+          if (Test-Path $root) { cmd /c rmdir /s /q $root }
+          New-Item -ItemType Directory -Path $root | Out-Null
+          Expand-Archive filesw10.zip -DestinationPath $root -Force
 
-        echo ===== VERIFICAR =====
-        dir *.7z.*
+      - name: Encontrar Files
+        id: files
+        shell: powershell
+        run: |
+          $dir = Get-ChildItem D:\W10UI -Recurse -Directory | Where-Object {$_.Name -eq "Files"} | Select-Object -First 1
+          if (!$dir) { throw "Files nao encontrada" }
+          "dir=$($dir.FullName)" >> $env:GITHUB_OUTPUT
 
-    # 🔍 TESTAR INTEGRIDADE
-    - name: Testar arquivo
-      shell: cmd
-      run: |
-        7z t base.7z.001
-        if %errorlevel% neq 0 exit /b 1
+      - name: Encontrar ISO
+        id: iso
+        shell: powershell
+        run: |
+          $iso = Get-ChildItem "${{ steps.files.outputs.dir }}" -Recurse -Filter *.iso | Sort Length -Descending | Select -First 1
+          if (!$iso) { throw "ISO nao encontrada" }
+          "iso=$($iso.FullName)" >> $env:GITHUB_OUTPUT
 
-    # 📦 EXTRAIR BASE
-    - name: Extrair base
-      shell: cmd
-      run: |
-        mkdir BASE
-        7z x base.7z.001 -oBASE -y
+      - name: Extrair ISO
+        id: target
+        shell: powershell
+        run: |
+          $dest = "D:\BASEISO"
+          if (Test-Path $dest) { cmd /c rmdir /s /q $dest }
+          & "C:\Program Files\7-Zip\7z.exe" x "${{ steps.iso.outputs.iso }}" "-o$dest" -y
+          if (!(Test-Path "$dest\sources\boot.wim")) { throw "ISO invalida" }
+          "root=$dest" >> $env:GITHUB_OUTPUT
 
-        echo ===== DEBUG BASE =====
-        dir BASE
-        dir BASE\Files
-        dir BASE\Files\ISO
+      - name: Garantir install.wim
+        shell: powershell
+        run: |
+          $src = "${{ steps.target.outputs.root }}\sources"
+          if (!(Test-Path "$src\install.wim")) {
+            if (Test-Path "$src\install.esd") {
+              dism /Export-Image /SourceImageFile:"$src\install.esd" /All /DestinationImageFile:"$src\install.wim" /Compress:max /CheckIntegrity
+            } else {
+              throw "install.wim/esd nao encontrado"
+            }
+          }
 
-    # 🔽 W10UI
-    - name: Baixar W10UI
-      shell: cmd
-      run: |
-        aria2c -x 8 -s 8 -o W10UI.zip https://tiny.cc/W10UI
-        7z x W10UI.zip -y
+      - name: Criar dirs
+        id: dirs
+        shell: powershell
+        run: |
+          $cab="D:\CAB";$mnt="D:\MNT";$re="D:\RE";$iso="D:\ISO"
+          foreach($p in @($cab,$mnt,$re,$iso)){
+            if(Test-Path $p){cmd /c rmdir /s /q $p}
+            New-Item -ItemType Directory -Path $p|Out-Null
+          }
+          "cab=$cab" >> $env:GITHUB_OUTPUT
+          "mnt=$mnt" >> $env:GITHUB_OUTPUT
+          "re=$re" >> $env:GITHUB_OUTPUT
+          "iso=$iso" >> $env:GITHUB_OUTPUT
 
-    # 🔽 UUP
-    - name: Extrair UUP
-      shell: cmd
-      run: |
-        mkdir uup
-        7z x uup10ltsc.zip -ouup -y
+      - name: Ajustar W10UI.ini
+        shell: powershell
+        run: |
+          $ini = Get-ChildItem "${{ steps.files.outputs.dir }}" -Recurse -Filter W10UI.ini | Select -First 1
+          if (!$ini) { throw "W10UI.ini nao encontrado" }
 
-    - name: Preparar aria2
-      shell: cmd
-      run: |
-        copy /Y "%ProgramData%\chocolatey\bin\aria2c.exe" uup\aria2c.exe
+          $txt = Get-Content $ini -Raw
 
-    - name: Baixar updates
-      shell: cmd
-      working-directory: uup
-      run: |
-        call uup_download_windows.cmd
-        if %errorlevel% neq 0 exit /b 1
+          $txt = $txt -replace '(?im)^Target\s*=.*$',"Target=${{ steps.target.outputs.root }}"
+          $txt = $txt -replace '(?im)^_CabDir\s*=.*$',"_CabDir=${{ steps.dirs.outputs.cab }}"
+          $txt = $txt -replace '(?im)^MountDir\s*=.*$',"MountDir=${{ steps.dirs.outputs.mnt }}"
+          $txt = $txt -replace '(?im)^WinreMount\s*=.*$',"WinreMount=${{ steps.dirs.outputs.re }}"
+          $txt = $txt -replace '(?im)^ISODir\s*=.*$',"ISODir=${{ steps.dirs.outputs.iso }}"
+          $txt = $txt -replace '(?im)^AutoStart\s*=.*$',"AutoStart=1"
+          $txt = $txt -replace '(?im)^AddUpdates\s*=.*$',"AddUpdates=1"
+          $txt = $txt -replace '(?im)^Cleanup\s*=.*$',"Cleanup=1"
+          $txt = $txt -replace '(?im)^ResetBase\s*=.*$',"ResetBase=1"
+          $txt = $txt -replace '(?im)^NetFx3\s*=.*$',"NetFx3=1"
+          $txt = $txt -replace '(?im)^UpdateWinRE\s*=.*$',"UpdateWinRE=1"
+          $txt = $txt -replace '(?im)^UseESD\s*=.*$',"UseESD=1"
+          $txt = $txt -replace '(?im)^ISO\s*=.*$',"ISO=1"
 
-    # 🔍 DETECTAR W10UI
-    - name: Detectar W10UI
-      shell: cmd
-      run: |
-        for /d %%d in (*) do (
-          if exist "%%d\W10UI.cmd" set W10PATH=%%d
-        )
+          Set-Content $ini $txt -Encoding ASCII
 
-        if not defined W10PATH (
-          echo ERRO: W10UI nao encontrado
-          dir
-          exit /b 1
-        )
+      - name: Limpeza DISM
+        shell: powershell
+        run: |
+          dism /Cleanup-Wim
 
-        echo W10UI encontrado em: %W10PATH%
+      - name: Rodar W10UI
+        shell: cmd
+        working-directory: ${{ steps.files.outputs.dir }}
+        run: |
+          call W10UI.cmd
 
-    # 🔥 PREPARAR AMBIENTE (CORRETO)
-    - name: Preparar ambiente
-      shell: cmd
-      run: |
-        mkdir "%W10PATH%\DVD"
+      - name: Encontrar ISO final
+        id: final
+        shell: powershell
+        run: |
+          $iso = Get-ChildItem "${{ steps.dirs.outputs.iso }}" -Recurse -Filter *.iso | Sort LastWriteTime -Descending | Select -First 1
+          if (!$iso) { throw "ISO final nao encontrada" }
+          "iso=$($iso.FullName)" >> $env:GITHUB_OUTPUT
 
-        REM BASE JA EXTRAIDA (SEM ISO)
-        xcopy BASE\Files\ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
+      - name: Compactar ISO
+        shell: powershell
+        run: |
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v1800m ISO_PARTS.zip "${{ steps.final.outputs.iso }}"
 
-        REM UPDATES NA RAIZ
-        xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
-
-        dir "%W10PATH%\DVD\sources"
-
-    # ⚙️ CONFIG AUTOMÁTICA
-    - name: Configurar W10UI
-      shell: cmd
-      run: |
-        echo AutoStart=1> cfg.ini
-        echo CreateISO=1>> cfg.ini
-        echo Cleanup=1>> cfg.ini
-        echo ResetBase=1>> cfg.ini
-        echo NetFx3=1>> cfg.ini
-        echo UpdateWinRE=1>> cfg.ini
-        echo UseESD=1>> cfg.ini
-        echo DVD=DVD>> cfg.ini
-
-        copy /Y cfg.ini "%W10PATH%\ConvertConfig.ini"
-
-    # 🚀 EXECUTAR
-    - name: Rodar W10UI
-      shell: cmd
-      run: |
-        pushd "%W10PATH%"
-        call W10UI.cmd
-        popd
-
-    # 🔍 ISO FINAL
-    - name: Localizar ISO final
-      shell: cmd
-      run: |
-        for /r %%i in (*.iso) do set ISOFILE=%%i
-
-        if not defined ISOFILE (
-          echo ERRO: ISO final nao encontrada
-          dir /s
-          exit /b 1
-        )
-
-        echo ISO FINAL: %ISOFILE%
-        move /Y "%ISOFILE%" FINAL.iso
-
-    # 📦 COMPACTAR
-    - name: Compactar ISO
-      shell: cmd
-      run: |
-        7z a -tzip -v1900m FINAL.zip FINAL.iso
-
-    # 🚀 RELEASE
-    - name: Criar Release
-      uses: ncipollo/release-action@v1
-      with:
-        tag: ltsc-${{ github.run_number }}
-        name: Windows 10 LTSC Atualizado
-        artifacts: FINAL.zip.*
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Criar release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: build-${{ github.run_id }}
+          name: Win10 ISO Build
+          artifacts: ISO_PARTS.zip*
+          token: ${{ github.token }}
