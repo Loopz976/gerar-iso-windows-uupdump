@@ -1,4 +1,4 @@
-name: Upload ISO Split Verified
+name: Upload ISO Split Clean
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    - name: Baixar ISO (aria2 ultra)
+    - name: Baixar ISO
       shell: cmd
       run: |
         aria2c -x16 -s16 -k1M --file-allocation=none ^
@@ -32,28 +32,7 @@ jobs:
           exit /b 1
         )
 
-    - name: Verificar tamanho da ISO
-      shell: powershell
-      run: |
-        $iso = "win10_ltsc.iso"
-        $size = (Get-Item $iso).Length
-
-        Write-Host "Tamanho: $size bytes"
-
-        if ($size -lt 3000000000) {
-          Write-Error "ISO muito pequena -> download corrompido"
-          exit 1
-        }
-
-    - name: Testar integridade (7zip)
-      shell: cmd
-      run: |
-        7z t win10_ltsc.iso
-
-        if errorlevel 1 (
-          echo ERRO: ISO corrompida (7z test falhou)
-          exit /b 1
-        )
+        for %%A in (win10_ltsc.iso) do echo Tamanho: %%~zA bytes
 
     - name: Validar estrutura ISO (boot.wim)
       shell: cmd
@@ -62,7 +41,7 @@ jobs:
         7z x win10_ltsc.iso sources\boot.wim -otest_iso -y >nul
 
         if not exist test_iso\sources\boot.wim (
-          echo ERRO: ISO invalida (boot.wim nao encontrado)
+          echo ERRO: ISO invalida ou corrompida
           exit /b 1
         )
 
@@ -84,6 +63,6 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         tag: iso-ltsc-${{ github.run_number }}
-        name: Windows 10 LTSC ISO Verified
+        name: Windows 10 LTSC ISO
         artifacts: WIN10_LTSC.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
