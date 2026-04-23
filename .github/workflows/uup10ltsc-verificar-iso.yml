@@ -1,4 +1,4 @@
-name: Verificar Versao ISO (Release 7z)
+name: Verificar ISO + WIM INFO COMPLETO
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Instalar 7zip
+    - name: Instalar ferramentas
       shell: cmd
       run: |
         choco install 7zip -y
@@ -28,25 +28,38 @@ jobs:
       run: |
         7z x base.7z.001 -y
 
-    - name: Encontrar ISO correta
+    - name: Encontrar ISO correta (FIX)
       shell: cmd
       run: |
+        set ISO_FOUND=0
+
         for /r %%i in (pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso) do (
-          echo ISO encontrada: %%i
-          copy "%%i" win10.iso
+          if exist "%%i" (
+            echo ISO encontrada: %%i
+            copy "%%i" win10.iso
+            set ISO_FOUND=1
+            goto :done
+          )
         )
 
-        if not exist win10.iso (
+        :done
+
+        if %ISO_FOUND%==0 (
           echo ERRO: ISO nao encontrada
           dir /s *.iso
           exit /b 1
         )
 
-    - name: Extrair ISO
+        echo ISO selecionada com sucesso
+
+    - name: Extrair ISO completa
       shell: cmd
       run: |
         mkdir ISO
         7z x win10.iso -oISO -y
+
+        echo ===== LISTANDO SOURCES =====
+        dir ISO\sources
 
         if not exist ISO\sources\install.wim (
           if not exist ISO\sources\install.esd (
@@ -55,15 +68,21 @@ jobs:
           )
         )
 
-    - name: Verificar versao real
+    - name: Verificar install.wim completo (DISM)
       shell: cmd
       run: |
-        echo ==============================
-        echo VERIFICANDO VERSAO REAL
-        echo ==============================
+        echo =====================================
+        echo INFO COMPLETO DO WIM
+        echo =====================================
 
         if exist ISO\sources\install.wim (
+          echo ===== INSTALL.WIM =====
           dism /Get-WimInfo /WimFile:ISO\sources\install.wim
         ) else (
+          echo ===== INSTALL.ESD =====
           dism /Get-WimInfo /WimFile:ISO\sources\install.esd
         )
+
+        echo =====================================
+        echo VERIFICACAO FINALIZADA
+        echo =====================================
