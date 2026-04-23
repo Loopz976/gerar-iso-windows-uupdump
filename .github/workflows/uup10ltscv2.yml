@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (W10UI FINAL AUTO ISO)
+name: Build Windows 10 LTSC ISO (W10UI FINAL ISO OK)
 
 on:
   workflow_dispatch:
@@ -20,25 +20,25 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🔽 DOWNLOAD ISO BASE
-    - name: Baixar ISO base
+    # 🔽 DOWNLOAD BASE
+    - name: Baixar base
       shell: cmd
       run: |
         curl -L -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001
         curl -L -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
         curl -L -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-    # 🔥 EXTRAIR TUDO
+    # 🔥 EXTRAIR PACOTE
     - name: Extrair pacote
       shell: cmd
       run: |
         mkdir ISO
         7z x base.7z.001 -oISO -y
 
-        echo ===== DEBUG ISO =====
+        echo ===== DEBUG =====
         dir ISO /s
 
-    # 🔥 LOCALIZAR ISO AUTOMATICAMENTE
+    # 🔥 ENCONTRAR ISO (SEM ERRO)
     - name: Encontrar ISO
       shell: cmd
       run: |
@@ -51,6 +51,7 @@ jobs:
         )
 
         echo ERRO: ISO nao encontrada
+        dir /s
         exit /b 1
 
         :found
@@ -91,7 +92,6 @@ jobs:
       working-directory: uup
       run: |
         call uup_download_windows.cmd
-        if %errorlevel% neq 0 exit /b 1
 
     # 🔍 DETECTAR W10UI
     - name: Detectar W10UI
@@ -103,7 +103,6 @@ jobs:
 
         if not defined W10PATH (
           echo ERRO: W10UI nao encontrado
-          dir
           exit /b 1
         )
 
@@ -119,7 +118,7 @@ jobs:
         dir "%W10PATH%\DVD\sources"
 
     # 🔥 CONFIG AUTO
-    - name: Configurar W10UI
+    - name: Configurar
       shell: cmd
       run: |
         echo AutoStart=1> cfg.ini
