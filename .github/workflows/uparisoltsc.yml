@@ -1,0 +1,55 @@
+name: Upload ISO Split Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 180
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+
+    - name: Baixar ISO (alta velocidade)
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -k1M --file-allocation=none ^
+        -o win10_ltsc.iso ^
+        https://windows.timefa.de/10/ltsc/pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso
+
+        if not exist win10_ltsc.iso (
+          echo ERRO: falha no download da ISO
+          exit /b 1
+        )
+
+        for %%A in (win10_ltsc.iso) do echo ISO baixada: %%~zA bytes
+
+    - name: Compactar em partes 1900MB
+      shell: cmd
+      run: |
+        7z a -tzip -v1900m WIN10_LTSC.zip win10_ltsc.iso
+
+        if errorlevel 1 (
+          echo ERRO ao compactar
+          exit /b 1
+        )
+
+        dir WIN10_LTSC.zip*
+
+    - name: Criar Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: iso-ltsc-${{ github.run_number }}
+        name: Windows 10 LTSC ISO Split
+        artifacts: WIN10_LTSC.zip.*
+        token: ${{ secrets.GITHUB_TOKEN }}
