@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (GitHub FAST)
+name: Build Windows 10 LTSC ISO (FINAL FIXED)
 
 on:
   workflow_dispatch:
@@ -21,40 +21,54 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🚀 DOWNLOAD TURBO (3 PARTES DO GITHUB)
-    - name: Baixar base (aria2 ultra)
+    # 🚀 DOWNLOAD CORRETO (NOME FORÇADO)
+    - name: Baixar base (fix multipart)
       shell: cmd
       run: |
-        aria2c ^
-          -x 16 -s 16 -k 1M ^
-          --file-allocation=none ^
-          --max-connection-per-server=16 ^
-          --min-split-size=1M ^
-          --retry-wait=3 ^
-          --max-tries=5 ^
-          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001 ^
-          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002 ^
+        aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
+          -o Win10.7z.001 ^
+          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001
+
+        aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
+          -o Win10.7z.002 ^
+          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
+
+        aria2c -x 16 -s 16 -k 1M --file-allocation=none ^
+          -o Win10.7z.003 ^
           https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-        echo ===== VERIFICAR =====
-        dir *.7z.*
+        echo ===== VERIFICAR PARTES =====
+        dir Win10.7z.*
 
-    # 📦 EXTRAIR MULTIPART (ISO VAI SAIR AQUI)
+    # 🔍 TESTAR ARQUIVO (CRÍTICO)
+    - name: Testar integridade
+      shell: cmd
+      run: |
+        7z t Win10.7z.001
+        if %errorlevel% neq 0 (
+          echo ERRO: arquivo corrompido
+          exit /b 1
+        )
+
+    # 📦 EXTRAIR CORRETAMENTE
     - name: Extrair pacote
       shell: cmd
       run: |
         mkdir BASE
-        7z x Win10LTSC21H2Base.7z.001 -oBASE -y
+        7z x Win10.7z.001 -oBASE -y
 
         echo ===== DEBUG BASE =====
         dir BASE /s
 
-    # 🔍 LOCALIZAR ISO DENTRO DO PACOTE
+        if not exist BASE (
+          echo ERRO: extracao falhou
+          exit /b 1
+        )
+
+    # 🔍 ENCONTRAR ISO
     - name: Encontrar ISO
       shell: cmd
       run: |
-        echo ===== PROCURANDO ISO =====
-
         for /r BASE %%i in (*.iso) do (
           echo ISO encontrada: %%i
           set ISOFILE=%%i
@@ -66,7 +80,6 @@ jobs:
         exit /b 1
 
         :found
-        echo ISO FINAL: %ISOFILE%
 
         mkdir ISO
         7z x "%ISOFILE%" -oISO -y
@@ -93,7 +106,7 @@ jobs:
         mkdir uup
         7z x uup10ltsc.zip -ouup -y
 
-    - name: Preparar aria2 (UUP)
+    - name: Preparar aria2
       shell: cmd
       run: |
         copy /Y "%ProgramData%\chocolatey\bin\aria2c.exe" uup\aria2c.exe
@@ -103,9 +116,8 @@ jobs:
       working-directory: uup
       run: |
         call uup_download_windows.cmd
-        if %errorlevel% neq 0 exit /b 1
 
-    # 🔍 DETECTAR W10UI
+    # 🔍 W10UI PATH
     - name: Detectar W10UI
       shell: cmd
       run: |
@@ -113,27 +125,17 @@ jobs:
           if exist "%%d\W10UI.cmd" set W10PATH=%%d
         )
 
-        if not defined W10PATH (
-          echo ERRO: W10UI nao encontrado
-          dir
-          exit /b 1
-        )
+        if not defined W10PATH exit /b 1
 
-        echo W10UI: %W10PATH%
-
-    # 🔧 PREPARAR AMBIENTE
+    # 🔧 PREPARAR
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
         xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
-
-        REM updates na raiz
         xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
-        dir "%W10PATH%\DVD\sources"
-
-    # ⚙️ CONFIG AUTOMÁTICA
+    # ⚙️ CONFIG
     - name: Configurar W10UI
       shell: cmd
       run: |
@@ -148,7 +150,7 @@ jobs:
 
         copy /Y cfg.ini "%W10PATH%\ConvertConfig.ini"
 
-    # 🚀 EXECUTAR
+    # 🚀 RUN
     - name: Rodar W10UI
       shell: cmd
       run: |
@@ -156,28 +158,19 @@ jobs:
         call W10UI.cmd
         popd
 
-    # 🔍 ISO FINAL
+    # 📦 FINAL
     - name: Localizar ISO final
       shell: cmd
       run: |
         for /r %%i in (*.iso) do set ISOFILE=%%i
-
-        if not defined ISOFILE (
-          echo ERRO: ISO final nao encontrada
-          dir /s
-          exit /b 1
-        )
-
         move /Y "%ISOFILE%" FINAL.iso
 
-    # 📦 COMPACTAR
-    - name: Compactar ISO
+    - name: Compactar
       shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip FINAL.iso
 
-    # 🚀 RELEASE
-    - name: Criar Release
+    - name: Release
       uses: ncipollo/release-action@v1
       with:
         tag: ltsc-${{ github.run_number }}
