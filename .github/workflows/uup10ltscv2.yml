@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (FAST W10UI)
+name: Build Windows 10 LTSC ISO (GitHub FAST)
 
 on:
   workflow_dispatch:
@@ -21,32 +21,55 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🚀 DOWNLOAD ULTRA RÁPIDO
-    - name: Baixar ISO (aria2 turbo)
+    # 🚀 DOWNLOAD TURBO (3 PARTES DO GITHUB)
+    - name: Baixar base (aria2 ultra)
       shell: cmd
       run: |
         aria2c ^
-          -x 16 ^
-          -s 16 ^
-          -k 1M ^
+          -x 16 -s 16 -k 1M ^
           --file-allocation=none ^
-          --summary-interval=0 ^
           --max-connection-per-server=16 ^
           --min-split-size=1M ^
           --retry-wait=3 ^
           --max-tries=5 ^
-          -o windows.iso ^
-          https://windows.timefa.de/10/ltsc/pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso
+          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001 ^
+          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002 ^
+          https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-        echo ===== VERIFICAR ISO =====
-        dir windows.iso
+        echo ===== VERIFICAR =====
+        dir *.7z.*
 
-    # 📦 EXTRAIR ISO
-    - name: Extrair ISO
+    # 📦 EXTRAIR MULTIPART (ISO VAI SAIR AQUI)
+    - name: Extrair pacote
       shell: cmd
       run: |
+        mkdir BASE
+        7z x Win10LTSC21H2Base.7z.001 -oBASE -y
+
+        echo ===== DEBUG BASE =====
+        dir BASE /s
+
+    # 🔍 LOCALIZAR ISO DENTRO DO PACOTE
+    - name: Encontrar ISO
+      shell: cmd
+      run: |
+        echo ===== PROCURANDO ISO =====
+
+        for /r BASE %%i in (*.iso) do (
+          echo ISO encontrada: %%i
+          set ISOFILE=%%i
+          goto :found
+        )
+
+        echo ERRO: ISO nao encontrada
+        dir BASE /s
+        exit /b 1
+
+        :found
+        echo ISO FINAL: %ISOFILE%
+
         mkdir ISO
-        7z x windows.iso -oISO -y
+        7z x "%ISOFILE%" -oISO -y
 
         if not exist ISO\sources\install.wim (
           if not exist ISO\sources\install.esd (
@@ -96,16 +119,16 @@ jobs:
           exit /b 1
         )
 
-        echo W10UI encontrado em: %W10PATH%
+        echo W10UI: %W10PATH%
 
-    # 🔧 PREPARAR
+    # 🔧 PREPARAR AMBIENTE
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
         xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
-        REM updates na raiz (igual seu método)
+        REM updates na raiz
         xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
         dir "%W10PATH%\DVD\sources"
@@ -145,7 +168,6 @@ jobs:
           exit /b 1
         )
 
-        echo ISO FINAL: %ISOFILE%
         move /Y "%ISOFILE%" FINAL.iso
 
     # 📦 COMPACTAR
@@ -159,6 +181,5 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         tag: ltsc-${{ github.run_number }}
-        name: Windows 10 LTSC Atualizado
         artifacts: FINAL.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
