@@ -130,12 +130,12 @@ jobs:
     - name: Compactar
       shell: cmd
       run: |
-        7z a -tzip -v1900m W1021H21288ESDISOW10UI.zip "${{ steps.iso.outputs.iso }}"
+        7z a -tzip -v1900m W1021H21288ESDISOW10UI.7z "${{ steps.iso.outputs.iso }}"
 
     - name: Release
       uses: ncipollo/release-action@v1
       with:
         tag: build-${{ github.run_number }}
         name: Windows 10 21H2 1288 Update ESD-ISO-W10UI
-        artifacts: W1021H21288ESDISOW10UI.zip.*
+        artifacts: W1021H21288ESDISOW10UI.7z.*
         token: ${{ secrets.GITHUB_TOKEN }}
