@@ -1,0 +1,115 @@
+name: Build Windows 10 LTSC ISO (W10UI + UUP)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Instalar dependências
+      shell: powershell
+      run: |
+        choco install aria2 -y
+        choco install 7zip -y
+
+    # 🔽 BAIXAR ISO BASE (3 PARTES)
+    - name: Baixar ISO base
+      shell: powershell
+      run: |
+        Invoke-WebRequest "https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001" -OutFile base.7z.001
+        Invoke-WebRequest "https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002" -OutFile base.7z.002
+        Invoke-WebRequest "https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003" -OutFile base.7z.003
+
+    # 🔽 EXTRAIR ISO BASE
+    - name: Extrair ISO
+      shell: cmd
+      run: |
+        7z x base.7z.001 -oISO
+
+    # 🔽 EXTRAIR UUP (SEU SCRIPT ORIGINAL)
+    - name: Extrair UUP
+      shell: powershell
+      run: |
+        Expand-Archive "uup10ltsc.zip" -DestinationPath "uup" -Force
+
+        if (!(Test-Path "uup\uup_download_windows.cmd")) {
+          Write-Error "Script UUP não encontrado!"
+          exit 1
+        }
+
+    # 🔧 PREPARAR aria2 (USANDO SEU PADRÃO)
+    - name: Preparar aria2
+      shell: powershell
+      run: |
+        $aria = (Get-Command aria2c).Source
+        Copy-Item $aria "uup\aria2c.exe" -Force
+
+    # 🔥 BAIXAR UPDATES (MIOLo ORIGINAL)
+    - name: Baixar updates
+      shell: cmd
+      working-directory: uup
+      run: |
+        echo Iniciando download dos updates...
+        call uup_download_windows.cmd
+
+    # 🔥 MOVER UPDATES PARA W10UI (PASTA Files\UUPs)
+    - name: Preparar updates para W10UI
+      shell: powershell
+      run: |
+        New-Item -ItemType Directory -Force -Path "W10UI\Files\UUPs" | Out-Null
+        Copy-Item "uup\*" "W10UI\Files\UUPs" -Recurse -Force
+
+    # 🔥 MOVER ISO BASE PARA W10UI
+    - name: Preparar ISO base
+      shell: powershell
+      run: |
+        Move-Item "ISO\*" "W10UI\DVD" -Force
+
+    # 🔥 EXECUTAR W10UI (TUDO AUTOMÁTICO PELO INI)
+    - name: Rodar W10UI
+      shell: cmd
+      working-directory: W10UI
+      run: |
+        echo Iniciando W10UI...
+        call W10UI.cmd
+
+    # 🔍 LOCALIZAR ISO FINAL
+    - name: Localizar ISO final
+      shell: powershell
+      run: |
+        $iso = Get-ChildItem -Recurse -Filter *.iso |
+               Sort-Object LastWriteTime -Descending |
+               Select-Object -First 1
+
+        if (!$iso) {
+          Write-Host "DEBUG:"
+          Get-ChildItem -Recurse
+          exit 1
+        }
+
+        Move-Item $iso.FullName FINAL.iso
+        Write-Host "ISO FINAL: $($iso.Name)"
+
+    # 📦 COMPACTAR EM PARTES
+    - name: Compactar ISO
+      shell: powershell
+      run: |
+        7z a -tzip -v1900m FINAL.zip FINAL.iso
+
+    # 🚀 PUBLICAR RELEASE
+    - name: Criar Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ltsc-${{ github.run_number }}
+        name: Windows 10 LTSC Atualizado
+        artifacts: FINAL.zip.*
+        token: ${{ secrets.GITHUB_TOKEN }}
