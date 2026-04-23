@@ -1,4 +1,4 @@
-name: Build ISO W10UI (Release Base) v3
+name: Build ISO W10UI (Release Base)
 
 on:
   workflow_dispatch:
@@ -48,8 +48,6 @@ jobs:
           dir /s
           exit /b 1
         )
-
-        echo ISO encontrada corretamente
 
     - name: Extrair ISO para DVD10UI (TARGET)
       shell: cmd
@@ -112,7 +110,7 @@ jobs:
       shell: cmd
       working-directory: BASE\Files
       run: |
-        set "PATH=%CD%\DVD10UI\sources;%PATH%"
+        set "_dism=%CD%\DVD10UI\sources\dism.exe"
         call W10UI.cmd
 
     - name: Localizar ISO final
