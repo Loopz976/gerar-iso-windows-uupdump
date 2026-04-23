@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (W10UI + UUP)
+name: Build Windows 10 LTSC ISO (W10UI)
 
 on:
   workflow_dispatch:
@@ -15,97 +15,97 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Instalar dependências
-      shell: powershell
+    - name: Instalar 7zip e aria2
+      shell: cmd
       run: |
-        choco install aria2 -y
         choco install 7zip -y
+        choco install aria2 -y
 
-    # 🔽 BAIXAR ISO BASE (3 PARTES)
+    # 🔽 DOWNLOAD ISO BASE (ESTÁVEL)
     - name: Baixar ISO base
-      shell: powershell
+      shell: cmd
       run: |
-        Invoke-WebRequest "https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001" -OutFile base.7z.001
-        Invoke-WebRequest "https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002" -OutFile base.7z.002
-        Invoke-WebRequest "https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003" -OutFile base.7z.003
+        curl -L -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001
+        curl -L -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
+        curl -L -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-    # 🔽 EXTRAIR ISO BASE
+    # 🔽 EXTRAIR ISO
     - name: Extrair ISO
       shell: cmd
       run: |
-        7z x base.7z.001 -oISO
+        mkdir ISO
+        7z x base.7z.001 -oISO -y
 
-    # 🔽 EXTRAIR UUP (SEU SCRIPT ORIGINAL)
+    # 🔽 EXTRAIR UUP
     - name: Extrair UUP
-      shell: powershell
+      shell: cmd
       run: |
-        Expand-Archive "uup10ltsc.zip" -DestinationPath "uup" -Force
+        mkdir uup
+        7z x uup10ltsc.zip -ouup -y
 
-        if (!(Test-Path "uup\uup_download_windows.cmd")) {
-          Write-Error "Script UUP não encontrado!"
-          exit 1
-        }
+        if not exist uup\uup_download_windows.cmd (
+          echo ERRO: Script UUP nao encontrado
+          exit /b 1
+        )
 
-    # 🔧 PREPARAR aria2 (USANDO SEU PADRÃO)
+    # 🔧 ARIA2 NO LOCAL CERTO
     - name: Preparar aria2
-      shell: powershell
+      shell: cmd
       run: |
-        $aria = (Get-Command aria2c).Source
-        Copy-Item $aria "uup\aria2c.exe" -Force
+        where aria2c
+        copy /Y "%ProgramData%\chocolatey\bin\aria2c.exe" uup\aria2c.exe
 
-    # 🔥 BAIXAR UPDATES (MIOLo ORIGINAL)
+    # 🔥 BAIXAR UPDATES (SCRIPT ORIGINAL)
     - name: Baixar updates
       shell: cmd
       working-directory: uup
       run: |
-        echo Iniciando download dos updates...
+        echo ===== INICIO DOWNLOAD UUP =====
         call uup_download_windows.cmd
+        if %errorlevel% neq 0 exit /b 1
 
-    # 🔥 MOVER UPDATES PARA W10UI (PASTA Files\UUPs)
-    - name: Preparar updates para W10UI
-      shell: powershell
+    # 🔽 PREPARAR W10UI
+    - name: Preparar W10UI
+      shell: cmd
       run: |
-        New-Item -ItemType Directory -Force -Path "W10UI\Files\UUPs" | Out-Null
-        Copy-Item "uup\*" "W10UI\Files\UUPs" -Recurse -Force
+        mkdir W10UI\DVD
+        xcopy ISO\* W10UI\DVD\ /E /H /C /I /Y
 
-    # 🔥 MOVER ISO BASE PARA W10UI
-    - name: Preparar ISO base
-      shell: powershell
-      run: |
-        Move-Item "ISO\*" "W10UI\DVD" -Force
+        mkdir W10UI\Files\UUPs
+        xcopy uup\* W10UI\Files\UUPs\ /E /H /C /I /Y
 
-    # 🔥 EXECUTAR W10UI (TUDO AUTOMÁTICO PELO INI)
+    # 🔥 EXECUTAR W10UI
     - name: Rodar W10UI
       shell: cmd
       working-directory: W10UI
       run: |
-        echo Iniciando W10UI...
+        echo ===== INICIANDO W10UI =====
         call W10UI.cmd
+        if %errorlevel% neq 0 exit /b 1
 
     # 🔍 LOCALIZAR ISO FINAL
-    - name: Localizar ISO final
-      shell: powershell
+    - name: Localizar ISO
+      shell: cmd
       run: |
-        $iso = Get-ChildItem -Recurse -Filter *.iso |
-               Sort-Object LastWriteTime -Descending |
-               Select-Object -First 1
+        echo ===== PROCURANDO ISO =====
+        for /r %%i in (*.iso) do set ISOFILE=%%i
 
-        if (!$iso) {
-          Write-Host "DEBUG:"
-          Get-ChildItem -Recurse
-          exit 1
-        }
+        if not defined ISOFILE (
+          echo ISO NAO ENCONTRADA
+          dir /s
+          exit /b 1
+        )
 
-        Move-Item $iso.FullName FINAL.iso
-        Write-Host "ISO FINAL: $($iso.Name)"
+        echo ISO ENCONTRADA: %ISOFILE%
+        move /Y "%ISOFILE%" FINAL.iso
 
-    # 📦 COMPACTAR EM PARTES
+    # 📦 COMPACTAR
     - name: Compactar ISO
-      shell: powershell
+      shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip FINAL.iso
 
-    # 🚀 PUBLICAR RELEASE
+    # 🚀 RELEASE
     - name: Criar Release
       uses: ncipollo/release-action@v1
       with:
