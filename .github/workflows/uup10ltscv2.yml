@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (W10UI)
+name: Build Windows 10 LTSC ISO (W10UI AUTO)
 
 on:
   workflow_dispatch:
@@ -20,14 +20,14 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🔽 W10UI
+    # 🔽 BAIXAR W10UI
     - name: Baixar W10UI
       shell: cmd
       run: |
         curl -L -o W10UI.zip https://tiny.cc/W10UI
         7z x W10UI.zip -y
 
-    # 🔽 ISO BASE
+    # 🔽 BAIXAR ISO BASE
     - name: Baixar ISO base
       shell: cmd
       run: |
@@ -41,15 +41,11 @@ jobs:
         mkdir ISO
         7z x base.7z.001 -oISO -y
 
-        echo ===== DEBUG ISO =====
-        dir ISO
-
-    # 🔥 NORMALIZAR ISO (resolve ISO dentro de ISO)
-    - name: Ajustar estrutura ISO
+    # 🔥 CORRIGIR ISO DUPLICADA
+    - name: Ajustar ISO
       shell: cmd
       run: |
         if exist ISO\ISO\sources\install.wim (
-          echo Corrigindo ISO duplicada...
           xcopy ISO\ISO\* ISO\ /E /H /C /I /Y
         )
 
@@ -83,12 +79,10 @@ jobs:
         call uup_download_windows.cmd
         if %errorlevel% neq 0 exit /b 1
 
-    # 🔥 PREPARAR W10UI
-    - name: Preparar W10UI
+    # 🔥 DETECTAR W10UI
+    - name: Detectar W10UI
       shell: cmd
       run: |
-        echo ===== PREPARANDO W10UI =====
-
         for /d %%d in (*) do (
           if exist "%%d\W10UI.cmd" set W10PATH=%%d
         )
@@ -99,34 +93,44 @@ jobs:
           exit /b 1
         )
 
-        echo W10UI em: %W10PATH%
+        echo W10UI encontrado em: %W10PATH%
 
+    # 🔥 PREPARAR ESTRUTURA
+    - name: Preparar ambiente
+      shell: cmd
+      run: |
         mkdir "%W10PATH%\DVD"
         xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
         mkdir "%W10PATH%\Files\UUPs"
         xcopy uup\* "%W10PATH%\Files\UUPs\" /E /H /C /I /Y
 
-        echo ===== DEBUG FINAL =====
         dir "%W10PATH%\DVD\sources"
 
-    # 🔥 RODAR W10UI (SEM PARAMETRO)
+    # 🔥 CONFIG AUTOMÁTICA (SIMULA 1 / 2 / 0)
+    - name: Configurar W10UI automático
+      shell: cmd
+      run: |
+        echo AutoStart=1> ConvertConfig.ini
+        echo CreateISO=1>> ConvertConfig.ini
+        echo AddUpdates=1>> ConvertConfig.ini
+        echo Cleanup=1>> ConvertConfig.ini
+        echo ResetBase=1>> ConvertConfig.ini
+        echo NetFx3=1>> ConvertConfig.ini
+        echo UpdateWinRE=1>> ConvertConfig.ini
+        echo UseESD=1>> ConvertConfig.ini
+        echo DVD=DVD>> ConvertConfig.ini
+        echo UUPs=Files\UUPs>> ConvertConfig.ini
+
+        copy /Y ConvertConfig.ini "%W10PATH%\ConvertConfig.ini"
+
+    # 🔥 EXECUTAR W10UI
     - name: Rodar W10UI
       shell: cmd
       run: |
-        echo ===== EXECUTANDO W10UI =====
-
-        for /r %%i in (W10UI.cmd) do (
-          pushd %%~dpi
-          call W10UI.cmd
-          popd
-          goto :done
-        )
-
-        echo ERRO: W10UI.cmd nao encontrado
-        exit /b 1
-
-        :done
+        pushd "%W10PATH%"
+        call W10UI.cmd
+        popd
 
     # 🔍 ISO FINAL
     - name: Localizar ISO
@@ -144,7 +148,7 @@ jobs:
         move /Y "%ISOFILE%" FINAL.iso
 
     # 📦 COMPACTAR
-    - name: Compactar
+    - name: Compactar ISO
       shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip FINAL.iso
