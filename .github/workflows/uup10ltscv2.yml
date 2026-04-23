@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (W10UI FINAL FIX)
+name: Build Windows 10 LTSC ISO (W10UI FINAL AUTO ISO)
 
 on:
   workflow_dispatch:
@@ -28,29 +28,33 @@ jobs:
         curl -L -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
         curl -L -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-    # 🔥 EXTRAIR .ISO DO .7Z
-    - name: Extrair ISO (fase 1)
+    # 🔥 EXTRAIR TUDO
+    - name: Extrair pacote
       shell: cmd
       run: |
         mkdir ISO
         7z x base.7z.001 -oISO -y
 
         echo ===== DEBUG ISO =====
-        dir ISO
+        dir ISO /s
 
-    # 🔥 EXTRAIR CONTEÚDO DA ISO
-    - name: Extrair ISO (fase 2)
+    # 🔥 LOCALIZAR ISO AUTOMATICAMENTE
+    - name: Encontrar ISO
       shell: cmd
       run: |
-        for %%i in (ISO\*.iso) do set ISOFILE=%%i
+        echo ===== PROCURANDO ISO =====
 
-        if not defined ISOFILE (
-          echo ERRO: ISO nao encontrada
-          dir ISO
-          exit /b 1
+        for /r %%i in (*.iso) do (
+          echo ISO encontrada: %%i
+          set ISOFILE=%%i
+          goto :found
         )
 
-        echo ISO encontrada: %ISOFILE%
+        echo ERRO: ISO nao encontrada
+        exit /b 1
+
+        :found
+        echo ISO FINAL: %ISOFILE%
 
         mkdir ISO_EXTRACT
         7z x "%ISOFILE%" -oISO_EXTRACT -y
@@ -63,14 +67,14 @@ jobs:
           )
         )
 
-    # 🔽 BAIXAR W10UI
+    # 🔽 W10UI
     - name: Baixar W10UI
       shell: cmd
       run: |
         curl -L -o W10UI.zip https://tiny.cc/W10UI
         7z x W10UI.zip -y
 
-    # 🔽 EXTRAIR UUP
+    # 🔽 UUP
     - name: Extrair UUP
       shell: cmd
       run: |
@@ -103,19 +107,15 @@ jobs:
           exit /b 1
         )
 
-        echo W10UI: %W10PATH%
-
-    # 🔥 PREPARAR AMBIENTE (IGUAL AO SEU PC)
+    # 🔥 PREPARAR
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
         xcopy ISO_EXTRACT\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
-        REM updates na raiz (igual seu método)
         xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
-        echo ===== VALIDANDO DVD =====
         dir "%W10PATH%\DVD\sources"
 
     # 🔥 CONFIG AUTO
@@ -133,7 +133,7 @@ jobs:
 
         copy /Y cfg.ini "%W10PATH%\ConvertConfig.ini"
 
-    # 🔥 EXECUTAR W10UI
+    # 🔥 EXECUTAR
     - name: Rodar W10UI
       shell: cmd
       run: |
@@ -142,7 +142,7 @@ jobs:
         popd
 
     # 🔍 ISO FINAL
-    - name: Localizar ISO
+    - name: Localizar ISO final
       shell: cmd
       run: |
         for /r %%i in (*.iso) do set ISOFILE=%%i
@@ -153,11 +153,10 @@ jobs:
           exit /b 1
         )
 
-        echo ISO FINAL: %ISOFILE%
         move /Y "%ISOFILE%" FINAL.iso
 
     # 📦 COMPACTAR
-    - name: Compactar ISO
+    - name: Compactar
       shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip FINAL.iso
@@ -167,6 +166,5 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         tag: ltsc-${{ github.run_number }}
-        name: Windows 10 LTSC Atualizado
         artifacts: FINAL.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
