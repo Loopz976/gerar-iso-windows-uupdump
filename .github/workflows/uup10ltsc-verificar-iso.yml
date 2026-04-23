@@ -1,4 +1,4 @@
-name: Verificar ISO + WIM INFO COMPLETO
+name: Confirmar Build Real ISO
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Instalar ferramentas
+    - name: Instalar 7zip e aria2
       shell: cmd
       run: |
         choco install 7zip -y
@@ -28,7 +28,7 @@ jobs:
       run: |
         7z x base.7z.001 -y
 
-    - name: Encontrar ISO correta (FIX)
+    - name: Selecionar ISO correta
       shell: cmd
       run: |
         set ISO_FOUND=0
@@ -50,39 +50,25 @@ jobs:
           exit /b 1
         )
 
-        echo ISO selecionada com sucesso
-
-    - name: Extrair ISO completa
+    - name: Extrair ISO
       shell: cmd
       run: |
         mkdir ISO
         7z x win10.iso -oISO -y
 
-        echo ===== LISTANDO SOURCES =====
-        dir ISO\sources
-
-        if not exist ISO\sources\install.wim (
-          if not exist ISO\sources\install.esd (
-            echo ERRO: install.wim/esd nao encontrado
-            exit /b 1
-          )
-        )
-
-    - name: Verificar install.wim completo (DISM)
+    - name: Mostrar info COMPLETA da build
       shell: cmd
       run: |
-        echo =====================================
-        echo INFO COMPLETO DO WIM
-        echo =====================================
+        echo ==============================
+        echo BUILD REAL DO WINDOWS
+        echo ==============================
 
         if exist ISO\sources\install.wim (
-          echo ===== INSTALL.WIM =====
-          dism /Get-WimInfo /WimFile:ISO\sources\install.wim
+          dism /Get-ImageInfo /ImageFile:ISO\sources\install.wim /Index:1
         ) else (
-          echo ===== INSTALL.ESD =====
-          dism /Get-WimInfo /WimFile:ISO\sources\install.esd
+          dism /Get-ImageInfo /ImageFile:ISO\sources\install.esd /Index:1
         )
 
-        echo =====================================
-        echo VERIFICACAO FINALIZADA
-        echo =====================================
+        echo ==============================
+        echo FIM DA VERIFICACAO
+        echo ==============================
