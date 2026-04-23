@@ -1,0 +1,136 @@
+name: Build ISO W10UI (Release Base)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+
+    - name: Extrair W10UI base
+      shell: cmd
+      run: |
+        mkdir BASE
+        7z x W10UI_RAIZ.zip -oBASE -y
+
+        if not exist BASE\Files\W10UI.cmd (
+          echo ERRO: W10UI nao encontrado
+          exit /b 1
+        )
+
+    - name: Baixar ISO LTSC (3 partes)
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc-1288/w10-ltsc-1288.7z.001
+        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc-1288/w10-ltsc-1288.7z.002
+        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc-1288/w10-ltsc-1288.7z.003
+
+    - name: Extrair ISO do pacote
+      shell: cmd
+      run: |
+        7z x base.7z.001 -y
+
+        if not exist "pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso" (
+          echo ERRO: ISO nao encontrada apos extracao
+          dir /s
+          exit /b 1
+        )
+
+        echo ISO encontrada corretamente
+
+    - name: Extrair ISO para DVD10UI (TARGET)
+      shell: cmd
+      run: |
+        mkdir BASE\Files\DVD10UI
+
+        7z x "pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso" -oBASE\Files\DVD10UI -y
+
+        if not exist BASE\Files\DVD10UI\sources\install.wim (
+          if not exist BASE\Files\DVD10UI\sources\install.esd (
+            echo ERRO: install.wim/esd nao encontrado
+            exit /b 1
+          )
+        )
+
+    - name: Preparar UUP
+      shell: cmd
+      run: |
+        mkdir UUP
+        7z x uup10ltsc.zip -oUUP -y
+
+        if not exist UUP\uup_download_windows.cmd (
+          echo ERRO: script UUP nao encontrado
+          exit /b 1
+        )
+
+        copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
+
+    - name: Baixar updates (UUP)
+      shell: cmd
+      working-directory: UUP
+      run: |
+        call uup_download_windows.cmd
+
+    - name: Copiar updates para raiz Files
+      shell: cmd
+      run: |
+        xcopy UUP\UUPs\* BASE\Files\ /E /H /C /I /Y
+
+    - name: Ajustar Target no INI
+      shell: powershell
+      run: |
+        $ini = "BASE\Files\W10UI.ini"
+
+        $target = (Resolve-Path "BASE\Files\DVD10UI").Path
+        $repo   = (Resolve-Path "BASE\Files").Path
+
+        $txt = Get-Content $ini -Raw
+        $txt = [regex]::Replace($txt, '(?im)^Target\s*=.*$', "Target=$target")
+        $txt = [regex]::Replace($txt, '(?im)^Repo\s*=.*$', "Repo=$repo")
+
+        Set-Content $ini $txt -Encoding ASCII
+
+    - name: Limpeza DISM
+      shell: cmd
+      run: |
+        dism /Cleanup-Wim
+
+    - name: Rodar W10UI
+      shell: cmd
+      working-directory: BASE\Files
+      run: |
+        call W10UI.cmd
+
+    - name: Localizar ISO final
+      id: iso
+      shell: powershell
+      run: |
+        $iso = Get-ChildItem BASE -Recurse -Filter *.iso | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if (-not $iso) { Write-Error "ISO final nao encontrada"; exit 1 }
+        "iso=$($iso.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - name: Compactar ISO final
+      shell: cmd
+      run: |
+        7z a -tzip -v1900m FINAL.zip "${{ steps.iso.outputs.iso }}"
+
+    - name: Criar release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: build-${{ github.run_number }}
+        name: ISO Final W10UI
+        artifacts: FINAL.zip.*
+        token: ${{ secrets.GITHUB_TOKEN }}
