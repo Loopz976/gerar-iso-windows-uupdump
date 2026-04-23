@@ -12,8 +12,7 @@ jobs:
     timeout-minutes: 360
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     - name: Instalar ferramentas
       shell: cmd
@@ -21,7 +20,7 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🔽 BAIXAR W10UI (LINK DIRETO)
+    # 🔽 BAIXAR W10UI
     - name: Baixar W10UI
       shell: cmd
       run: |
@@ -36,14 +35,13 @@ jobs:
         curl -L -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
         curl -L -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-    # 🔽 EXTRAIR ISO
     - name: Extrair ISO
       shell: cmd
       run: |
         mkdir ISO
         7z x base.7z.001 -oISO -y
 
-    # 🔽 EXTRAIR UUP
+    # 🔽 UUP
     - name: Extrair UUP
       shell: cmd
       run: |
@@ -55,46 +53,56 @@ jobs:
           exit /b 1
         )
 
-    # 🔧 ARIA2
     - name: Preparar aria2
       shell: cmd
       run: |
         copy /Y "%ProgramData%\chocolatey\bin\aria2c.exe" uup\aria2c.exe
 
-    # 🔥 BAIXAR UPDATES
     - name: Baixar updates
       shell: cmd
       working-directory: uup
       run: |
-        echo ===== DOWNLOAD UPDATES =====
+        echo ===== BAIXANDO UPDATES =====
         call uup_download_windows.cmd
         if %errorlevel% neq 0 exit /b 1
 
-    # 🔽 PREPARAR W10UI
-    - name: Preparar ambiente W10UI
+    # 🔥 PREPARAR ESTRUTURA CORRETA
+    - name: Preparar W10UI
       shell: cmd
       run: |
-        mkdir WORK\DVD
-        xcopy ISO\* WORK\DVD\ /E /H /C /I /Y
+        echo ===== PREPARANDO W10UI =====
 
-        mkdir WORK\Files\UUPs
-        xcopy uup\* WORK\Files\UUPs\ /E /H /C /I /Y
+        REM detectar pasta correta do W10UI
+        for /d %%d in (*) do (
+          if exist "%%d\W10UI.cmd" set W10PATH=%%d
+        )
 
-    # 🔥 RODAR W10UI (AUTO DETECTA CAMINHO)
+        if not defined W10PATH (
+          echo ERRO: W10UI nao encontrado
+          dir
+          exit /b 1
+        )
+
+        echo W10UI encontrado em: %W10PATH%
+
+        REM criar estrutura
+        mkdir "%W10PATH%\DVD"
+        xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
+
+        mkdir "%W10PATH%\Files\UUPs"
+        xcopy uup\* "%W10PATH%\Files\UUPs\" /E /H /C /I /Y
+
+    # 🔥 EXECUTAR W10UI
     - name: Rodar W10UI
       shell: cmd
       run: |
-        echo ===== INICIANDO W10UI =====
+        echo ===== EXECUTANDO W10UI =====
 
         for /r %%i in (W10UI.cmd) do (
-          echo Encontrado: %%i
-
+          echo Rodando: %%i
           pushd %%~dpi
-          xcopy "%cd%\..\WORK\*" "%cd%\" /E /H /C /I /Y
-
-          call "%%i"
+          call W10UI.cmd
           popd
-
           goto :done
         )
 
@@ -117,7 +125,7 @@ jobs:
           exit /b 1
         )
 
-        echo ISO: %ISOFILE%
+        echo ISO FINAL: %ISOFILE%
         move /Y "%ISOFILE%" FINAL.iso
 
     # 📦 COMPACTAR
