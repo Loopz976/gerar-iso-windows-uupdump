@@ -1,4 +1,4 @@
-name: Build ISO W10UI (Release Base)
+name: Build ISO W10UI (Release Base) v3
 
 on:
   workflow_dispatch:
@@ -106,11 +106,17 @@ jobs:
       run: |
         dism /Cleanup-Wim
 
-    - name: Rodar W10UI (FORÇANDO DISM CORRETO)
+    - name: Rodar W10UI (FORÇANDO DISM CORRETO VIA PATH)
       shell: cmd
       working-directory: BASE\Files
       run: |
-        set "_dism=%CD%\DVD10UI\sources\dism.exe"
+        echo ===== FORCANDO DISM DA ISO =====
+        set "PATH=%CD%\DVD10UI\sources;%PATH%"
+
+        echo ===== DISM EM USO =====
+        where dism
+        dism /?
+
         call W10UI.cmd
 
     - name: Localizar ISO final
