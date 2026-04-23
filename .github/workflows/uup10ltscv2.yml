@@ -1,0 +1,136 @@
+name: Build Windows 10 LTSC ISO (W10UI)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+
+    # 🔽 BAIXAR W10UI (LINK DIRETO)
+    - name: Baixar W10UI
+      shell: cmd
+      run: |
+        curl -L -o W10UI.zip https://tiny.cc/W10UI
+        7z x W10UI.zip -y
+
+    # 🔽 BAIXAR ISO BASE
+    - name: Baixar ISO base
+      shell: cmd
+      run: |
+        curl -L -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001
+        curl -L -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
+        curl -L -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
+
+    # 🔽 EXTRAIR ISO
+    - name: Extrair ISO
+      shell: cmd
+      run: |
+        mkdir ISO
+        7z x base.7z.001 -oISO -y
+
+    # 🔽 EXTRAIR UUP
+    - name: Extrair UUP
+      shell: cmd
+      run: |
+        mkdir uup
+        7z x uup10ltsc.zip -ouup -y
+
+        if not exist uup\uup_download_windows.cmd (
+          echo ERRO: Script UUP nao encontrado
+          exit /b 1
+        )
+
+    # 🔧 ARIA2
+    - name: Preparar aria2
+      shell: cmd
+      run: |
+        copy /Y "%ProgramData%\chocolatey\bin\aria2c.exe" uup\aria2c.exe
+
+    # 🔥 BAIXAR UPDATES
+    - name: Baixar updates
+      shell: cmd
+      working-directory: uup
+      run: |
+        echo ===== DOWNLOAD UPDATES =====
+        call uup_download_windows.cmd
+        if %errorlevel% neq 0 exit /b 1
+
+    # 🔽 PREPARAR W10UI
+    - name: Preparar ambiente W10UI
+      shell: cmd
+      run: |
+        mkdir WORK\DVD
+        xcopy ISO\* WORK\DVD\ /E /H /C /I /Y
+
+        mkdir WORK\Files\UUPs
+        xcopy uup\* WORK\Files\UUPs\ /E /H /C /I /Y
+
+    # 🔥 RODAR W10UI (AUTO DETECTA CAMINHO)
+    - name: Rodar W10UI
+      shell: cmd
+      run: |
+        echo ===== INICIANDO W10UI =====
+
+        for /r %%i in (W10UI.cmd) do (
+          echo Encontrado: %%i
+
+          pushd %%~dpi
+          xcopy "%cd%\..\WORK\*" "%cd%\" /E /H /C /I /Y
+
+          call "%%i"
+          popd
+
+          goto :done
+        )
+
+        echo ERRO: W10UI.cmd nao encontrado
+        exit /b 1
+
+        :done
+
+    # 🔍 LOCALIZAR ISO
+    - name: Localizar ISO
+      shell: cmd
+      run: |
+        echo ===== PROCURANDO ISO =====
+
+        for /r %%i in (*.iso) do set ISOFILE=%%i
+
+        if not defined ISOFILE (
+          echo ISO NAO ENCONTRADA
+          dir /s
+          exit /b 1
+        )
+
+        echo ISO: %ISOFILE%
+        move /Y "%ISOFILE%" FINAL.iso
+
+    # 📦 COMPACTAR
+    - name: Compactar ISO
+      shell: cmd
+      run: |
+        7z a -tzip -v1900m FINAL.zip FINAL.iso
+
+    # 🚀 RELEASE
+    - name: Criar Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ltsc-${{ github.run_number }}
+        name: Windows 10 LTSC Atualizado
+        artifacts: FINAL.zip.*
+        token: ${{ secrets.GITHUB_TOKEN }}
