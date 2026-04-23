@@ -20,14 +20,14 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🔽 BAIXAR W10UI
+    # 🔽 W10UI
     - name: Baixar W10UI
       shell: cmd
       run: |
         curl -L -o W10UI.zip https://tiny.cc/W10UI
         7z x W10UI.zip -y
 
-    # 🔽 BAIXAR ISO BASE
+    # 🔽 ISO BASE
     - name: Baixar ISO base
       shell: cmd
       run: |
@@ -40,6 +40,24 @@ jobs:
       run: |
         mkdir ISO
         7z x base.7z.001 -oISO -y
+
+        echo ===== DEBUG ISO =====
+        dir ISO
+
+    # 🔥 NORMALIZAR ISO (resolve ISO dentro de ISO)
+    - name: Ajustar estrutura ISO
+      shell: cmd
+      run: |
+        if exist ISO\ISO\sources\install.wim (
+          echo Corrigindo ISO duplicada...
+          xcopy ISO\ISO\* ISO\ /E /H /C /I /Y
+        )
+
+        if not exist ISO\sources\install.wim (
+          echo ERRO: install.wim nao encontrado
+          dir /s ISO
+          exit /b 1
+        )
 
     # 🔽 UUP
     - name: Extrair UUP
@@ -62,17 +80,15 @@ jobs:
       shell: cmd
       working-directory: uup
       run: |
-        echo ===== BAIXANDO UPDATES =====
         call uup_download_windows.cmd
         if %errorlevel% neq 0 exit /b 1
 
-    # 🔥 PREPARAR ESTRUTURA CORRETA
+    # 🔥 PREPARAR W10UI
     - name: Preparar W10UI
       shell: cmd
       run: |
         echo ===== PREPARANDO W10UI =====
 
-        REM detectar pasta correta do W10UI
         for /d %%d in (*) do (
           if exist "%%d\W10UI.cmd" set W10PATH=%%d
         )
@@ -83,23 +99,24 @@ jobs:
           exit /b 1
         )
 
-        echo W10UI encontrado em: %W10PATH%
+        echo W10UI em: %W10PATH%
 
-        REM criar estrutura
         mkdir "%W10PATH%\DVD"
         xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
         mkdir "%W10PATH%\Files\UUPs"
         xcopy uup\* "%W10PATH%\Files\UUPs\" /E /H /C /I /Y
 
-    # 🔥 EXECUTAR W10UI
+        echo ===== DEBUG FINAL =====
+        dir "%W10PATH%\DVD\sources"
+
+    # 🔥 RODAR W10UI (SEM PARAMETRO)
     - name: Rodar W10UI
       shell: cmd
       run: |
         echo ===== EXECUTANDO W10UI =====
 
         for /r %%i in (W10UI.cmd) do (
-          echo Rodando: %%i
           pushd %%~dpi
           call W10UI.cmd
           popd
@@ -111,12 +128,10 @@ jobs:
 
         :done
 
-    # 🔍 LOCALIZAR ISO
+    # 🔍 ISO FINAL
     - name: Localizar ISO
       shell: cmd
       run: |
-        echo ===== PROCURANDO ISO =====
-
         for /r %%i in (*.iso) do set ISOFILE=%%i
 
         if not defined ISOFILE (
@@ -129,7 +144,7 @@ jobs:
         move /Y "%ISOFILE%" FINAL.iso
 
     # 📦 COMPACTAR
-    - name: Compactar ISO
+    - name: Compactar
       shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip FINAL.iso
