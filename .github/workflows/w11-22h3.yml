@@ -1,4 +1,4 @@
-name: Windows 10 22H2 6456 - ISO-ESD-W10UI
+name: Win 10 22H2 6456 - ISO-ESD-W10UI
 
 on:
   workflow_dispatch:
