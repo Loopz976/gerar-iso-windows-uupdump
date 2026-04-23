@@ -1,4 +1,4 @@
-name: Build ISO W10UI Full Auto
+name: Build ISO W10UI (Release Base)
 
 on:
   workflow_dispatch:
@@ -31,34 +31,32 @@ jobs:
           exit /b 1
         )
 
-    - name: Baixar ISO base (3 partes)
+    - name: Baixar ISO (Release multipart)
       shell: cmd
       run: |
-        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001
-        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
-        aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
+        aria2c -x16 -s16 -k1M --file-allocation=none -o iso.zip.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/iso-ltsc-3/WIN10_LTSC.zip.001
+        aria2c -x16 -s16 -k1M --file-allocation=none -o iso.zip.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/iso-ltsc-3/WIN10_LTSC.zip.002
+        aria2c -x16 -s16 -k1M --file-allocation=none -o iso.zip.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/iso-ltsc-3/WIN10_LTSC.zip.003
 
-    - name: Extrair pacote e pegar ISO
+    - name: Extrair ISO do zip
       shell: cmd
       run: |
-        7z x base.7z.001 -y
+        7z x iso.zip.001 -y
 
-        echo ===== PROCURANDO ISO =====
-        for %%i in (*.iso) do set ISO=%%i
-
-        if not defined ISO (
-          echo ERRO: ISO nao encontrada dentro do pacote
+        if not exist win10_ltsc.iso (
+          echo ERRO: ISO nao encontrada apos extracao
           dir
           exit /b 1
         )
 
-        echo ISO encontrada: %ISO%
+        echo ISO pronta: win10_ltsc.iso
 
     - name: Extrair ISO para DVD10UI (TARGET)
       shell: cmd
       run: |
         mkdir BASE\Files\DVD10UI
-        7z x "%ISO%" -oBASE\Files\DVD10UI -y
+
+        7z x win10_ltsc.iso -oBASE\Files\DVD10UI -y
 
         if not exist BASE\Files\DVD10UI\sources\install.wim (
           if not exist BASE\Files\DVD10UI\sources\install.esd (
@@ -91,15 +89,10 @@ jobs:
       run: |
         xcopy UUP\UUPs\* BASE\Files\ /E /H /C /I /Y
 
-    - name: Ajustar apenas Target no INI
+    - name: Ajustar Target no INI
       shell: powershell
       run: |
         $ini = "BASE\Files\W10UI.ini"
-
-        if (!(Test-Path $ini)) {
-          Write-Error "W10UI.ini nao encontrado"
-          exit 1
-        }
 
         $target = (Resolve-Path "BASE\Files\DVD10UI").Path
         $repo   = (Resolve-Path "BASE\Files").Path
@@ -110,15 +103,12 @@ jobs:
 
         Set-Content $ini $txt -Encoding ASCII
 
-        Write-Host "==== INI FINAL ===="
-        Get-Content $ini
-
     - name: Limpeza DISM
       shell: cmd
       run: |
         dism /Cleanup-Wim
 
-    - name: Rodar W10UI automático
+    - name: Rodar W10UI
       shell: cmd
       working-directory: BASE\Files
       run: |
