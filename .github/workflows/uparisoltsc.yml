@@ -1,4 +1,4 @@
-name: Upload ISO Split Release
+name: Upload ISO Split Verified
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    - name: Baixar ISO (alta velocidade)
+    - name: Baixar ISO (aria2 ultra)
       shell: cmd
       run: |
         aria2c -x16 -s16 -k1M --file-allocation=none ^
@@ -28,11 +28,45 @@ jobs:
         https://windows.timefa.de/10/ltsc/pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso
 
         if not exist win10_ltsc.iso (
-          echo ERRO: falha no download da ISO
+          echo ERRO: ISO nao baixada
           exit /b 1
         )
 
-        for %%A in (win10_ltsc.iso) do echo ISO baixada: %%~zA bytes
+    - name: Verificar tamanho da ISO
+      shell: powershell
+      run: |
+        $iso = "win10_ltsc.iso"
+        $size = (Get-Item $iso).Length
+
+        Write-Host "Tamanho: $size bytes"
+
+        if ($size -lt 3000000000) {
+          Write-Error "ISO muito pequena -> download corrompido"
+          exit 1
+        }
+
+    - name: Testar integridade (7zip)
+      shell: cmd
+      run: |
+        7z t win10_ltsc.iso
+
+        if errorlevel 1 (
+          echo ERRO: ISO corrompida (7z test falhou)
+          exit /b 1
+        )
+
+    - name: Validar estrutura ISO (boot.wim)
+      shell: cmd
+      run: |
+        mkdir test_iso
+        7z x win10_ltsc.iso sources\boot.wim -otest_iso -y >nul
+
+        if not exist test_iso\sources\boot.wim (
+          echo ERRO: ISO invalida (boot.wim nao encontrado)
+          exit /b 1
+        )
+
+        echo ISO valida OK
 
     - name: Compactar em partes 1900MB
       shell: cmd
@@ -50,6 +84,6 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         tag: iso-ltsc-${{ github.run_number }}
-        name: Windows 10 LTSC ISO Split
+        name: Windows 10 LTSC ISO Verified
         artifacts: WIN10_LTSC.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
