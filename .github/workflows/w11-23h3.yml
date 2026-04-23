@@ -1,0 +1,142 @@
+name: Windows 11 23H2 6060 - Gerar (ISO-ESD-W10UI)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: LIMPAR AMBIENTE TOTAL
+      shell: cmd
+      run: |
+        rmdir /s /q D:\W10UI 2>nul
+        rmdir /s /q D:\BASEISO 2>nul
+        rmdir /s /q UUP 2>nul
+        del /f /q *.iso 2>nul
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+
+    - name: Criar pasta curta
+      shell: cmd
+      run: |
+        mkdir D:\W10UI
+
+    - name: Extrair W10UI base (CURTO)
+      shell: cmd
+      run: |
+        7z x W10UI_RAIZ.zip -oD:\W10UI -y
+
+        if not exist D:\W10UI\Files\W10UI.cmd (
+          echo ERRO W10UI
+          exit /b 1
+        )
+
+    - name: Baixar ISO
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-6060/w11-consumer-6060.7z.001
+        aria2c -x16 -s16 -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-6060/w11-consumer-6060.7z.002
+        aria2c -x16 -s16 -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-6060/w11-consumer-6060.7z.003
+        aria2c -x16 -s16 -o base.7z.004 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-6060/w11-consumer-6060.7z.004
+
+    - name: Extrair ISO
+      shell: cmd
+      run: |
+        7z x base.7z.001 -y
+
+    - name: Extrair ISO para BASEISO (CURTO)
+      shell: cmd
+      run: |
+        mkdir D:\BASEISO
+        7z x pt-br_windows_11_consumer_editions_version_23h2_updated_oct_2025_x64_dvd_8deeaabd.iso -oD:\BASEISO -y
+
+    - name: Validar WIM
+      shell: cmd
+      run: |
+        dism /Get-WimInfo /WimFile:D:\BASEISO\sources\install.wim
+
+    - name: Preparar UUP
+      shell: cmd
+      run: |
+        mkdir UUP
+        7z x w11-23h2-upp.zip -oUUP -y
+        copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
+
+    - name: Baixar updates
+      shell: cmd
+      working-directory: UUP
+      run: |
+        call uup_download_windows.cmd
+
+    - name: Copiar updates
+      shell: cmd
+      run: |
+        xcopy UUP\UUPs\* D:\W10UI\Files\ /E /H /C /I /Y
+
+    - name: Preparar dirs W10UI (ESSENCIAL)
+      shell: cmd
+      run: |
+        mkdir D:\W10UI_TEMP
+        mkdir D:\W10UI_MNT
+        mkdir D:\W10UI_MRE
+        mkdir D:\W10UI_ISO
+
+    - name: Ajustar INI COMPLETO
+      shell: powershell
+      run: |
+        $ini = "D:\W10UI\Files\W10UI.ini"
+
+        $txt = Get-Content $ini -Raw
+        $txt = $txt -replace '(?im)^Target\s*=.*$', 'Target        =D:\BASEISO'
+        $txt = $txt -replace '(?im)^Repo\s*=.*$', 'Repo          =D:\W10UI\Files'
+        $txt = $txt -replace '(?im)^MountDir\s*=.*$', 'MountDir      =D:\W10UI_MNT'
+        $txt = $txt -replace '(?im)^WinreMount\s*=.*$', 'WinreMount    =D:\W10UI_MRE'
+        $txt = $txt -replace '(?im)^_CabDir\s*=.*$', '_CabDir       =D:\W10UI_TEMP'
+        $txt = $txt -replace '(?im)^ISODir\s*=.*$', 'ISODir        =D:\W10UI_ISO'
+        $txt = $txt -replace '(?im)^AutoStart\s*=.*$', 'AutoStart     =1'
+        $txt = $txt -replace '(?im)^ISO\s*=.*$', 'ISO           =1'
+
+        Set-Content $ini $txt -Encoding ASCII
+
+    - name: Limpeza DISM
+      shell: cmd
+      run: |
+        dism /Cleanup-Wim
+
+    - name: Rodar W10UI (AGORA FUNCIONA)
+      shell: cmd
+      working-directory: D:\W10UI\Files
+      run: |
+        call W10UI.cmd
+
+    - name: Pegar ISO final
+      id: iso
+      shell: powershell
+      run: |
+        $iso = Get-ChildItem D:\W10UI_ISO -Filter *.iso | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        "iso=$($iso.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - name: Compactar
+      shell: cmd
+      run: |
+        7z a -tzip -v1900m FINAL.zip "${{ steps.iso.outputs.iso }}"
+
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: build-${{ github.run_number }}
+        name: ISO Final
+        artifacts: FINAL.zip.*
+        token: ${{ secrets.GITHUB_TOKEN }}
