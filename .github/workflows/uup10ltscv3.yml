@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2020
+    runs-on: windows-latest
     timeout-minutes: 360
 
     steps:
