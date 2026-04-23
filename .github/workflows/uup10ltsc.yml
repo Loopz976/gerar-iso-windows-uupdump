@@ -38,25 +38,27 @@ jobs:
         aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
         aria2c -x16 -s16 -k1M --file-allocation=none -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
 
-    - name: Extrair ISO base
+    - name: Extrair pacote e pegar ISO
       shell: cmd
       run: |
         7z x base.7z.001 -y
 
+        echo ===== PROCURANDO ISO =====
         for %%i in (*.iso) do set ISO=%%i
 
         if not defined ISO (
-          echo ERRO: ISO nao encontrada
+          echo ERRO: ISO nao encontrada dentro do pacote
+          dir
           exit /b 1
         )
 
         echo ISO encontrada: %ISO%
 
-    - name: Extrair ISO para DVD10UI
+    - name: Extrair ISO para DVD10UI (TARGET)
       shell: cmd
       run: |
         mkdir BASE\Files\DVD10UI
-        7z x %ISO% -oBASE\Files\DVD10UI -y
+        7z x "%ISO%" -oBASE\Files\DVD10UI -y
 
         if not exist BASE\Files\DVD10UI\sources\install.wim (
           if not exist BASE\Files\DVD10UI\sources\install.esd (
@@ -84,24 +86,25 @@ jobs:
       run: |
         call uup_download_windows.cmd
 
-    - name: Copiar updates para raiz Files (IMPORTANTE)
+    - name: Copiar updates para raiz Files
       shell: cmd
       run: |
         xcopy UUP\UUPs\* BASE\Files\ /E /H /C /I /Y
-
-        echo ===== DEBUG FILES =====
-        dir BASE\Files
 
     - name: Ajustar apenas Target no INI
       shell: powershell
       run: |
         $ini = "BASE\Files\W10UI.ini"
 
+        if (!(Test-Path $ini)) {
+          Write-Error "W10UI.ini nao encontrado"
+          exit 1
+        }
+
         $target = (Resolve-Path "BASE\Files\DVD10UI").Path
         $repo   = (Resolve-Path "BASE\Files").Path
 
         $txt = Get-Content $ini -Raw
-
         $txt = [regex]::Replace($txt, '(?im)^Target\s*=.*$', "Target=$target")
         $txt = [regex]::Replace($txt, '(?im)^Repo\s*=.*$', "Repo=$repo")
 
@@ -115,7 +118,7 @@ jobs:
       run: |
         dism /Cleanup-Wim
 
-    - name: Rodar W10UI
+    - name: Rodar W10UI automático
       shell: cmd
       working-directory: BASE\Files
       run: |
