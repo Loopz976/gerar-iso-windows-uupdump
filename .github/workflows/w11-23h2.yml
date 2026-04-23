@@ -131,12 +131,12 @@ jobs:
     - name: Compactar
       shell: cmd
       run: |
-        7z a -tzip -v1900m Wi11-23H2-6060-ESD-ISO-W10UI-Update.zip "${{ steps.iso.outputs.iso }}"
+        7z a -tzip -v1900m W1123H26060ESDISOW10UI.zip "${{ steps.iso.outputs.iso }}"
 
     - name: Release
       uses: ncipollo/release-action@v1
       with:
-        tag: Wi11-23H2-6060-ESD-ISO-W10UI-Update-${{ github.run_number }}
-        name: Wi11-23H2-6060-ESD-ISO-W10UI-Update
-        artifacts: Wi11-23H2-6060-ESD-ISO-W10UI-Update.zip.*
+        tag: W11-23H2-6060-W10UI-${{ github.run_number }}
+        name: Windows 11 23H2 6060 Update ESD-ISO-W10UI
+        artifacts: W1123H26060ESDISOW10UI.zip.*
         token: ${{ secrets.GITHUB_TOKEN }}
