@@ -1,4 +1,4 @@
-name: Build Windows 10 LTSC ISO (W10UI FINAL ISO OK)
+name: Build Windows 10 LTSC ISO (W10UI FINAL STABLE)
 
 on:
   workflow_dispatch:
@@ -20,50 +20,26 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    # 🔽 DOWNLOAD BASE
-    - name: Baixar base
+    # 🔥 BAIXAR ISO DIRETA (SEM ERRO)
+    - name: Baixar ISO
       shell: cmd
       run: |
-        curl -L -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.001
-        curl -L -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.002
-        curl -L -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w10-ltsc21h2-base-2/Win10LTSC21H2Base.7z.003
+        curl -L -o windows.iso https://windows.timefa.de/10/ltsc/pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso
 
-    # 🔥 EXTRAIR PACOTE
-    - name: Extrair pacote
+        echo ===== VERIFICAR ISO =====
+        dir windows.iso
+
+    # 🔥 EXTRAIR ISO
+    - name: Extrair ISO
       shell: cmd
       run: |
         mkdir ISO
-        7z x base.7z.001 -oISO -y
+        7z x windows.iso -oISO -y
 
-        echo ===== DEBUG =====
-        dir ISO /s
-
-    # 🔥 ENCONTRAR ISO (SEM ERRO)
-    - name: Encontrar ISO
-      shell: cmd
-      run: |
-        echo ===== PROCURANDO ISO =====
-
-        for /r %%i in (*.iso) do (
-          echo ISO encontrada: %%i
-          set ISOFILE=%%i
-          goto :found
-        )
-
-        echo ERRO: ISO nao encontrada
-        dir /s
-        exit /b 1
-
-        :found
-        echo ISO FINAL: %ISOFILE%
-
-        mkdir ISO_EXTRACT
-        7z x "%ISOFILE%" -oISO_EXTRACT -y
-
-        if not exist ISO_EXTRACT\sources\install.wim (
-          if not exist ISO_EXTRACT\sources\install.esd (
+        if not exist ISO\sources\install.wim (
+          if not exist ISO\sources\install.esd (
             echo ERRO: install.wim/esd nao encontrado
-            dir /s ISO_EXTRACT
+            dir /s ISO
             exit /b 1
           )
         )
@@ -106,19 +82,20 @@ jobs:
           exit /b 1
         )
 
-    # 🔥 PREPARAR
+    # 🔥 PREPARAR (IGUAL SEU PC)
     - name: Preparar ambiente
       shell: cmd
       run: |
         mkdir "%W10PATH%\DVD"
-        xcopy ISO_EXTRACT\* "%W10PATH%\DVD\" /E /H /C /I /Y
+        xcopy ISO\* "%W10PATH%\DVD\" /E /H /C /I /Y
 
+        REM updates na raiz
         xcopy uup\* "%W10PATH%\" /E /H /C /I /Y
 
         dir "%W10PATH%\DVD\sources"
 
     # 🔥 CONFIG AUTO
-    - name: Configurar
+    - name: Configurar W10UI
       shell: cmd
       run: |
         echo AutoStart=1> cfg.ini
