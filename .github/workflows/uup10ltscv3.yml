@@ -1,4 +1,4 @@
-name: Build ISO W10UI (Release Base) v3
+name: Build ISO W10UI (FINAL CORRIGIDO) v3
 
 on:
   workflow_dispatch:
@@ -8,11 +8,20 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2019
     timeout-minutes: 360
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: LIMPAR AMBIENTE TOTAL
+      shell: cmd
+      run: |
+        rmdir /s /q BASE 2>nul
+        rmdir /s /q UUP 2>nul
+        del /f /q *.iso 2>nul
+        del /f /q *.wim 2>nul
+        del /f /q *.esd 2>nul
 
     - name: Instalar ferramentas
       shell: cmd
@@ -44,24 +53,21 @@ jobs:
         7z x base.7z.001 -y
 
         if not exist "pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso" (
-          echo ERRO: ISO nao encontrada apos extracao
+          echo ERRO: ISO nao encontrada
           dir /s
           exit /b 1
         )
 
-    - name: Extrair ISO para DVD10UI (TARGET)
+    - name: Extrair ISO para TARGET
       shell: cmd
       run: |
         mkdir BASE\Files\DVD10UI
-
         7z x "pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso" -oBASE\Files\DVD10UI -y
 
-        if not exist BASE\Files\DVD10UI\sources\install.wim (
-          if not exist BASE\Files\DVD10UI\sources\install.esd (
-            echo ERRO: install.wim/esd nao encontrado
-            exit /b 1
-          )
-        )
+    - name: VALIDAR VERSAO DO WIM
+      shell: cmd
+      run: |
+        dism /Get-WimInfo /WimFile:BASE\Files\DVD10UI\sources\install.wim
 
     - name: Preparar UUP
       shell: cmd
@@ -69,31 +75,25 @@ jobs:
         mkdir UUP
         7z x uup10ltsc.zip -oUUP -y
 
-        if not exist UUP\uup_download_windows.cmd (
-          echo ERRO: script UUP nao encontrado
-          exit /b 1
-        )
-
         copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
 
-    - name: Baixar updates (UUP)
+    - name: Baixar updates
       shell: cmd
       working-directory: UUP
       run: |
         call uup_download_windows.cmd
 
-    - name: Copiar updates para raiz Files
+    - name: Copiar updates
       shell: cmd
       run: |
         xcopy UUP\UUPs\* BASE\Files\ /E /H /C /I /Y
 
-    - name: Ajustar Target no INI
+    - name: Ajustar INI
       shell: powershell
       run: |
         $ini = "BASE\Files\W10UI.ini"
-
         $target = (Resolve-Path "BASE\Files\DVD10UI").Path
-        $repo   = (Resolve-Path "BASE\Files").Path
+        $repo = (Resolve-Path "BASE\Files").Path
 
         $txt = Get-Content $ini -Raw
         $txt = [regex]::Replace($txt, '(?im)^Target\s*=.*$', "Target=$target")
@@ -106,17 +106,10 @@ jobs:
       run: |
         dism /Cleanup-Wim
 
-    - name: Rodar W10UI (FORÇANDO DISM CORRETO VIA PATH)
+    - name: Rodar W10UI
       shell: cmd
       working-directory: BASE\Files
       run: |
-        echo ===== FORCANDO DISM DA ISO =====
-        set "PATH=%CD%\DVD10UI\sources;%PATH%"
-
-        echo ===== DISM EM USO =====
-        where dism
-        dism /?
-
         call W10UI.cmd
 
     - name: Localizar ISO final
@@ -124,10 +117,10 @@ jobs:
       shell: powershell
       run: |
         $iso = Get-ChildItem BASE -Recurse -Filter *.iso | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        if (-not $iso) { Write-Error "ISO final nao encontrada"; exit 1 }
+        if (-not $iso) { exit 1 }
         "iso=$($iso.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-    - name: Compactar ISO final
+    - name: Compactar ISO
       shell: cmd
       run: |
         7z a -tzip -v1900m FINAL.zip "${{ steps.iso.outputs.iso }}"
