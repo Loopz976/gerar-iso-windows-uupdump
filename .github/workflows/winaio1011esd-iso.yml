@@ -1,4 +1,4 @@
-name: AIO FINAL WINDOWS (CORRIGIDO)
+name: AIO FINAL WINDOWS (ULTRA ESTÁVEL)
 
 on:
   workflow_dispatch:
@@ -14,10 +14,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Instalar ferramentas
+    - name: Instalar 7zip + ADK
       shell: cmd
       run: |
-        choco install 7zip aria2 windows-adk -y
+        choco install 7zip windows-adk -y
 
     - name: Criar pasta
       shell: cmd
@@ -30,21 +30,21 @@ jobs:
       shell: cmd
       run: |
         cd work
+        del *.7z.* 2>nul
 
-        aria2c -x16 -s16 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
+        curl -L -o W11.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001
+        curl -L -o W11.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002
+        curl -L -o W11.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003
+        curl -L -o W11.7z.004 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
 
-        7z x W1123H26060ESDISOW10UI.7z.001 -ow11 -y
+        7z x W11.7z.001 -ow11 -y
         for %%i in (w11\*.iso) do 7z x "%%i" -ow11_ex -y
 
         dism /Export-Image /SourceImageFile:w11_ex\sources\install.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
 
         rd /s /q w11
         rd /s /q w11_ex
-        del *.7z.*
+        del W11.7z.*
 
     # =========================
     # 🟢 W10 22H2
@@ -53,20 +53,20 @@ jobs:
       shell: cmd
       run: |
         cd work
+        del *.7z.* 2>nul
 
-        aria2c -x16 -s16 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.001 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.002 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.003
+        curl -L -o W10_22.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.001
+        curl -L -o W10_22.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.002
+        curl -L -o W10_22.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.003
 
-        7z x W1022H26456ESDISOW10UI.7z.001 -ow10_22 -y
+        7z x W10_22.7z.001 -ow10_22 -y
         for %%i in (w10_22\*.iso) do 7z x "%%i" -ow10_22_ex -y
 
         dism /Export-Image /SourceImageFile:w10_22_ex\sources\install.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
 
         rd /s /q w10_22
         rd /s /q w10_22_ex
-        del *.7z.*
+        del W10_22.7z.*
 
     # =========================
     # 🟡 W10 LTSC
@@ -75,31 +75,29 @@ jobs:
       shell: cmd
       run: |
         cd work
+        del *.7z.* 2>nul
 
-        aria2c -x16 -s16 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.001 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.002 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.003
+        curl -L -o W10_21.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.001
+        curl -L -o W10_21.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.002
+        curl -L -o W10_21.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.003
 
-        7z x W1021H21288ESDISOW10UI.7z.001 -ow10_21 -y
+        7z x W10_21.7z.001 -ow10_21 -y
         for %%i in (w10_21\*.iso) do 7z x "%%i" -ow10_21_ex -y
 
         dism /Export-Image /SourceImageFile:w10_21_ex\sources\install.esd /SourceIndex:1 /DestinationImageFile:final.esd /Compress:recovery
 
         rd /s /q w10_21
         rd /s /q w10_21_ex
-        del *.7z.*
+        del W10_21.7z.*
 
     # =========================
-    # 🏷️ NOMES CORRIGIDO
+    # 🏷️ NOMES
     # =========================
     - name: Definir nomes
       shell: cmd
       run: |
         dism /Set-ImageInfo /ImageFile:work\final.esd /Index:1 /Name:"Windows 11 Pro 23H2" /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
-
         dism /Set-ImageInfo /ImageFile:work\final.esd /Index:2 /Name:"Windows 10 Pro 22H2" /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
-
         dism /Set-ImageInfo /ImageFile:work\final.esd /Index:3 /Name:"Windows 10 Enterprise LTSC 2021 21H2" /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
 
     # =========================
@@ -111,13 +109,12 @@ jobs:
         mkdir ISO
         cd ISO
 
-        aria2c -x16 -s16 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003 ^
-        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
+        curl -L -o base.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001
+        curl -L -o base.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002
+        curl -L -o base.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003
+        curl -L -o base.7z.004 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
 
-        7z x W1123H26060ESDISOW10UI.7z.001 -y
+        7z x base.7z.001 -y
         for %%i in (*.iso) do 7z x "%%i" -o. -y
 
         copy ..\work\final.esd sources\install.esd
@@ -136,7 +133,7 @@ jobs:
     # =========================
     # 🚀 RELEASE
     # =========================
-    - name: Criar Release
+    - name: Release
       uses: ncipollo/release-action@v1
       with:
         tag: AIO-${{ github.run_number }}
