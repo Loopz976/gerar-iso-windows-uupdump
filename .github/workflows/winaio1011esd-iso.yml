@@ -1,4 +1,4 @@
-name: WIN 11 E 11 ISO AIO ESD
+name: AIO FINAL WINDOWS (CORRIGIDO)
 
 on:
   workflow_dispatch:
@@ -19,17 +19,18 @@ jobs:
       run: |
         choco install 7zip aria2 windows-adk -y
 
-    - name: Preparar pasta
+    - name: Criar pasta
       shell: cmd
       run: mkdir work
 
     # =========================
-    # 🔵 W11 → extrair index 4
+    # 🔵 W11
     # =========================
     - name: Processar W11
       shell: cmd
       run: |
         cd work
+
         aria2c -x16 -s16 ^
         https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001 ^
         https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002 ^
@@ -46,12 +47,13 @@ jobs:
         del *.7z.*
 
     # =========================
-    # 🟢 W10 22H2 → index 4
+    # 🟢 W10 22H2
     # =========================
     - name: Processar W10 22H2
       shell: cmd
       run: |
         cd work
+
         aria2c -x16 -s16 ^
         https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.001 ^
         https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.002 ^
@@ -67,12 +69,13 @@ jobs:
         del *.7z.*
 
     # =========================
-    # 🟡 W10 LTSC → index 1
+    # 🟡 W10 LTSC
     # =========================
     - name: Processar W10 LTSC
       shell: cmd
       run: |
         cd work
+
         aria2c -x16 -s16 ^
         https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.001 ^
         https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.002 ^
@@ -88,22 +91,19 @@ jobs:
         del *.7z.*
 
     # =========================
-    # 🏷️ Nomes e descrições
+    # 🏷️ NOMES CORRIGIDO
     # =========================
     - name: Definir nomes
       shell: cmd
       run: |
-        dism /Set-ImageName /ImageFile:work\final.esd /Index:1 /Name:"Windows 11 Pro 23H2"
-        dism /Set-ImageDescription /ImageFile:work\final.esd /Index:1 /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
+        dism /Set-ImageInfo /ImageFile:work\final.esd /Index:1 /Name:"Windows 11 Pro 23H2" /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
 
-        dism /Set-ImageName /ImageFile:work\final.esd /Index:2 /Name:"Windows 10 Pro 22H2"
-        dism /Set-ImageDescription /ImageFile:work\final.esd /Index:2 /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
+        dism /Set-ImageInfo /ImageFile:work\final.esd /Index:2 /Name:"Windows 10 Pro 22H2" /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
 
-        dism /Set-ImageName /ImageFile:work\final.esd /Index:3 /Name:"Windows 10 Enterprise LTSC 2021 21H2"
-        dism /Set-ImageDescription /ImageFile:work\final.esd /Index:3 /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
+        dism /Set-ImageInfo /ImageFile:work\final.esd /Index:3 /Name:"Windows 10 Enterprise LTSC 2021 21H2" /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
 
     # =========================
-    # 💿 Criar ISO base (Win11)
+    # 💿 ISO FINAL
     # =========================
     - name: Criar ISO final
       shell: cmd
@@ -126,7 +126,7 @@ jobs:
         oscdimg -m -o -u2 -udfver102 ISO pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
 
     # =========================
-    # 📦 Compactar
+    # 📦 COMPACTAR
     # =========================
     - name: Compactar
       shell: cmd
@@ -134,9 +134,9 @@ jobs:
         7z a -t7z -mx=9 -v1900m WIMAIOPROLTSC1110ESDW10UI.7z pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
 
     # =========================
-    # 🚀 Release
+    # 🚀 RELEASE
     # =========================
-    - name: Publicar Release
+    - name: Criar Release
       uses: ncipollo/release-action@v1
       with:
         tag: AIO-${{ github.run_number }}
