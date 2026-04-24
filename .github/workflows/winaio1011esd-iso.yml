@@ -1,4 +1,4 @@
-name: AIO FINAL WINDOWS (DEFINITIVO)
+name: AIO FINAL WINDOWS (CMD PURO)
 
 on:
   workflow_dispatch:
@@ -14,14 +14,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Instalar ferramentas (FORÇADO COMPLETO)
-      shell: powershell
+    - name: Instalar ferramentas
+      shell: cmd
       run: |
-        choco install 7zip -y
-
-        # Instalar ADK Deployment Tools corretamente
-        Invoke-WebRequest -Uri https://go.microsoft.com/fwlink/?linkid=2196127 -OutFile adksetup.exe
-        Start-Process .\adksetup.exe -ArgumentList "/quiet /norestart /features OptionId.DeploymentTools" -Wait
+        choco install 7zip windows-adk -y
 
     - name: Criar pasta
       shell: cmd
@@ -35,10 +31,10 @@ jobs:
       run: |
         cd work
 
-        curl -L -o w11.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001
-        curl -L -o w11.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002
-        curl -L -o w11.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003
-        curl -L -o w11.7z.004 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
+        curl.exe -L -o w11.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001
+        curl.exe -L -o w11.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002
+        curl.exe -L -o w11.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003
+        curl.exe -L -o w11.7z.004 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
 
         7z x w11.7z.001 -ow11 -y
         for %%i in (w11\*.iso) do 7z x "%%i" -ow11_ex -y
@@ -56,9 +52,9 @@ jobs:
       run: |
         cd work
 
-        curl -L -o w10_22.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.001
-        curl -L -o w10_22.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.002
-        curl -L -o w10_22.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.003
+        curl.exe -L -o w10_22.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.001
+        curl.exe -L -o w10_22.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.002
+        curl.exe -L -o w10_22.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.003
 
         7z x w10_22.7z.001 -ow10_22 -y
         for %%i in (w10_22\*.iso) do 7z x "%%i" -ow10_22_ex -y
@@ -76,9 +72,9 @@ jobs:
       run: |
         cd work
 
-        curl -L -o w10_21.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.001
-        curl -L -o w10_21.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.002
-        curl -L -o w10_21.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.003
+        curl.exe -L -o w10_21.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.001
+        curl.exe -L -o w10_21.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.002
+        curl.exe -L -o w10_21.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.003
 
         7z x w10_21.7z.001 -ow10_21 -y
         for %%i in (w10_21\*.iso) do 7z x "%%i" -ow10_21_ex -y
@@ -92,38 +88,34 @@ jobs:
     # 💿 ISO FINAL
     # =========================
     - name: Criar ISO final
-      shell: powershell
+      shell: cmd
       run: |
         mkdir ISO
+        cd ISO
 
-        curl -L -o base.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001
-        curl -L -o base.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002
-        curl -L -o base.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003
-        curl -L -o base.7z.004 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
+        curl.exe -L -o base.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001
+        curl.exe -L -o base.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002
+        curl.exe -L -o base.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003
+        curl.exe -L -o base.7z.004 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
 
-        7z x base.7z.001 -y -oISO
-        Get-ChildItem ISO -Filter *.iso | ForEach-Object { 7z x $_.FullName -oISO -y }
+        7z x base.7z.001 -y
+        for %%i in (*.iso) do 7z x "%%i" -o. -y
 
-        Copy-Item work\final.esd ISO\sources\install.esd -Force
+        copy ..\work\final.esd sources\install.esd
 
-        # Encontrar oscdimg correto
-        $osc = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10" -Recurse -Filter oscdimg.exe |
-               Where-Object { $_.FullName -like "*Deployment Tools*amd64*" } |
-               Select-Object -First 1
+        set OSC="C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg\oscdimg.exe"
 
-        if (-not $osc) {
-          Write-Host "ERRO: oscdimg nao encontrado"
-          exit 1
-        }
+        if not exist %OSC% (
+          echo ERRO: oscdimg nao encontrado
+          exit /b 1
+        )
 
-        Write-Host "Usando: $($osc.FullName)"
+        for /r . %%i in (etfsboot.com) do set BIOS=%%i
+        for /r . %%i in (efisys.bin) do set EFI=%%i
 
-        $bios = Get-ChildItem ISO -Recurse -Filter etfsboot.com | Select-Object -First 1
-        $efi  = Get-ChildItem ISO -Recurse -Filter efisys.bin | Select-Object -First 1
-
-        & $osc.FullName -m -o -u2 -udfver102 `
-        "-bootdata:2#p0,e,b$($bios.FullName)#pEF,e,b$($efi.FullName)" `
-        ISO pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
+        %OSC% -m -o -u2 -udfver102 ^
+        -bootdata:2#p0,e,b"%BIOS%"#pEF,e,b"%EFI%" ^
+        . ..\pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
 
     # =========================
     # 📦 7Z
