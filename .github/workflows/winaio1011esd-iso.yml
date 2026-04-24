@@ -1,4 +1,4 @@
-name: AIO FINAL WINDOWS (DEFINITIVO)
+name: AIO FINAL WINDOWS (FINAL ABSOLUTO)
 
 on:
   workflow_dispatch:
@@ -91,7 +91,7 @@ jobs:
         del w10_21.7z.*
 
     # =========================
-    # 💿 ISO FINAL (BOOT FIX)
+    # 💿 ISO FINAL (COM FIX)
     # =========================
     - name: Criar ISO final
       shell: cmd
@@ -110,8 +110,19 @@ jobs:
         copy ..\work\final.esd sources\install.esd
         cd ..
 
-        oscdimg -m -o -u2 -udfver102 ^
-        -bootdata:2#p0,e,bISO\boot\etfsboot.com#pEF,e,bISO\efi\microsoft\boot\efisys.bin ^
+        for /r "C:\Program Files (x86)\Windows Kits" %%i in (oscdimg.exe) do set OSC=%%i
+        echo Usando: %OSC%
+
+        if not exist "%OSC%" (
+          echo ERRO: oscdimg nao encontrado
+          exit /b 1
+        )
+
+        for /r ISO %%i in (etfsboot.com) do set BIOS=%%i
+        for /r ISO %%i in (efisys.bin) do set EFI=%%i
+
+        "%OSC%" -m -o -u2 -udfver102 ^
+        -bootdata:2#p0,e,b%BIOS%#pEF,e,b%EFI% ^
         ISO pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
 
     # =========================
@@ -131,4 +142,4 @@ jobs:
         tag: AIO-${{ github.run_number }}
         name: AIO Windows Final
         artifacts: WIMAIOPROLTSC1110ESDW10UI.7z.*
-        token: ${{ secrets.GITHUB_TOKEN }}O 
+        token: ${{ secrets.GITHUB_TOKEN }}
