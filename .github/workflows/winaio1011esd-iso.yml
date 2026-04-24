@@ -1,0 +1,145 @@
+name: WIN 11 E 11 ISO AIO ESD
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip aria2 windows-adk -y
+
+    - name: Preparar pasta
+      shell: cmd
+      run: mkdir work
+
+    # =========================
+    # 🔵 W11 → extrair index 4
+    # =========================
+    - name: Processar W11
+      shell: cmd
+      run: |
+        cd work
+        aria2c -x16 -s16 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
+
+        7z x W1123H26060ESDISOW10UI.7z.001 -ow11 -y
+        for %%i in (w11\*.iso) do 7z x "%%i" -ow11_ex -y
+
+        dism /Export-Image /SourceImageFile:w11_ex\sources\install.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
+
+        rd /s /q w11
+        rd /s /q w11_ex
+        del *.7z.*
+
+    # =========================
+    # 🟢 W10 22H2 → index 4
+    # =========================
+    - name: Processar W10 22H2
+      shell: cmd
+      run: |
+        cd work
+        aria2c -x16 -s16 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.001 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.002 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-22H2-6456-W10UI-3/W1022H26456ESDISOW10UI.7z.003
+
+        7z x W1022H26456ESDISOW10UI.7z.001 -ow10_22 -y
+        for %%i in (w10_22\*.iso) do 7z x "%%i" -ow10_22_ex -y
+
+        dism /Export-Image /SourceImageFile:w10_22_ex\sources\install.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
+
+        rd /s /q w10_22
+        rd /s /q w10_22_ex
+        del *.7z.*
+
+    # =========================
+    # 🟡 W10 LTSC → index 1
+    # =========================
+    - name: Processar W10 LTSC
+      shell: cmd
+      run: |
+        cd work
+        aria2c -x16 -s16 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.001 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.002 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-21H2-1288-W10UI-4/W1021H21288ESDISOW10UI.7z.003
+
+        7z x W1021H21288ESDISOW10UI.7z.001 -ow10_21 -y
+        for %%i in (w10_21\*.iso) do 7z x "%%i" -ow10_21_ex -y
+
+        dism /Export-Image /SourceImageFile:w10_21_ex\sources\install.esd /SourceIndex:1 /DestinationImageFile:final.esd /Compress:recovery
+
+        rd /s /q w10_21
+        rd /s /q w10_21_ex
+        del *.7z.*
+
+    # =========================
+    # 🏷️ Nomes e descrições
+    # =========================
+    - name: Definir nomes
+      shell: cmd
+      run: |
+        dism /Set-ImageName /ImageFile:work\final.esd /Index:1 /Name:"Windows 11 Pro 23H2"
+        dism /Set-ImageDescription /ImageFile:work\final.esd /Index:1 /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
+
+        dism /Set-ImageName /ImageFile:work\final.esd /Index:2 /Name:"Windows 10 Pro 22H2"
+        dism /Set-ImageDescription /ImageFile:work\final.esd /Index:2 /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
+
+        dism /Set-ImageName /ImageFile:work\final.esd /Index:3 /Name:"Windows 10 Enterprise LTSC 2021 21H2"
+        dism /Set-ImageDescription /ImageFile:work\final.esd /Index:3 /Description:"Atualizado em 23/04/2026 • ESD • W10UI Clean"
+
+    # =========================
+    # 💿 Criar ISO base (Win11)
+    # =========================
+    - name: Criar ISO final
+      shell: cmd
+      run: |
+        mkdir ISO
+        cd ISO
+
+        aria2c -x16 -s16 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.001 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.002 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.003 ^
+        https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W11-23H2-6060-W10UI-3/W1123H26060ESDISOW10UI.7z.004
+
+        7z x W1123H26060ESDISOW10UI.7z.001 -y
+        for %%i in (*.iso) do 7z x "%%i" -o. -y
+
+        copy ..\work\final.esd sources\install.esd
+        cd ..
+
+        oscdimg -m -o -u2 -udfver102 ISO pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
+
+    # =========================
+    # 📦 Compactar
+    # =========================
+    - name: Compactar
+      shell: cmd
+      run: |
+        7z a -t7z -mx=9 -v1900m WIMAIOPROLTSC1110ESDW10UI.7z pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
+
+    # =========================
+    # 🚀 Release
+    # =========================
+    - name: Publicar Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: AIO-${{ github.run_number }}
+        name: AIO Windows Final
+        artifacts: WIMAIOPROLTSC1110ESDW10UI.7z.*
+        token: ${{ secrets.GITHUB_TOKEN }}
