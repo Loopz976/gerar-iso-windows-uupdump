@@ -1,4 +1,4 @@
-name: AIO Windows ISO Unified (W11 + W10)
+name: AIO Windows ISO FINAL (W11 + W10)
 
 on:
   workflow_dispatch:
@@ -11,6 +11,7 @@ jobs:
   w11:
     runs-on: windows-latest
     timeout-minutes: 360
+
     steps:
     - uses: actions/checkout@v4
 
@@ -34,9 +35,6 @@ jobs:
         7z x w11-23h2-upp.zip -oUUP -y
         copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
 
-    - name: Build W11
-      shell: cmd
-      run: |
         call UUP\uup_download_windows.cmd
         xcopy UUP\UUPs\* D:\W10UI\Files\ /E /H /C /I /Y
 
@@ -48,17 +46,18 @@ jobs:
         cd /d D:\W10UI\Files
         call W10UI.cmd
 
-        copy /y D:\W10UI_ISO\*.iso w11.iso
+        copy /y D:\W10UI_ISO\sources\install.esd install_w11.esd
 
     - uses: actions/upload-artifact@v4
       with:
-        name: w11
-        path: w11.iso
+        name: w11_esd
+        path: install_w11.esd
 
 
   w10_22h2:
     runs-on: windows-latest
     timeout-minutes: 360
+
     steps:
     - uses: actions/checkout@v4
 
@@ -82,9 +81,6 @@ jobs:
         7z x w10-22h2-upp.zip -oUUP -y
         copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
 
-    - name: Build W10 22H2
-      shell: cmd
-      run: |
         call UUP\uup_download_windows.cmd
         xcopy UUP\UUPs\* D:\W10UI\Files\ /E /H /C /I /Y
 
@@ -96,17 +92,18 @@ jobs:
         cd /d D:\W10UI\Files
         call W10UI.cmd
 
-        copy /y D:\W10UI_ISO\*.iso w10_22h2.iso
+        copy /y D:\W10UI_ISO\sources\install.esd install_w10_22h2.esd
 
     - uses: actions/upload-artifact@v4
       with:
-        name: w10_22h2
-        path: w10_22h2.iso
+        name: w10_22h2_esd
+        path: install_w10_22h2.esd
 
 
   w10_21h2:
     runs-on: windows-latest
     timeout-minutes: 360
+
     steps:
     - uses: actions/checkout@v4
 
@@ -129,9 +126,6 @@ jobs:
         7z x w10-21h2-upp.zip -oUUP -y
         copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
 
-    - name: Build W10 21H2
-      shell: cmd
-      run: |
         call UUP\uup_download_windows.cmd
         xcopy UUP\UUPs\* D:\W10UI\Files\ /E /H /C /I /Y
 
@@ -143,12 +137,12 @@ jobs:
         cd /d D:\W10UI\Files
         call W10UI.cmd
 
-        copy /y D:\W10UI_ISO\*.iso w10_21h2.iso
+        copy /y D:\W10UI_ISO\sources\install.esd install_w10_21h2.esd
 
     - uses: actions/upload-artifact@v4
       with:
-        name: w10_21h2
-        path: w10_21h2.iso
+        name: w10_21h2_esd
+        path: install_w10_21h2.esd
 
 
   final:
@@ -159,48 +153,45 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install tools
-      run: choco install 7zip -y
+    - run: choco install 7zip -y
 
     - uses: actions/download-artifact@v4
 
-    - name: Extrair ISOs
+    - name: Unificar ESD
       shell: cmd
       run: |
-        mkdir work
-        7z x w11\w11.iso -owork\w11 -y
-        7z x w10_22h2\w10_22h2.iso -owork\w10_22 -y
-        7z x w10_21h2\w10_21h2.iso -owork\w10_21 -y
-
-    - name: Criar ESD unificado
-      shell: cmd
-      run: |
-        dism /Export-Image /SourceImageFile:work\w11\sources\install.esd /SourceIndex:4 /DestinationImageFile:work\final.esd /Compress:recovery
-        dism /Export-Image /SourceImageFile:work\w10_22\sources\install.esd /SourceIndex:4 /DestinationImageFile:work\final.esd /Compress:recovery
-        dism /Export-Image /SourceImageFile:work\w10_21\sources\install.esd /SourceIndex:1 /DestinationImageFile:work\final.esd /Compress:recovery
+        dism /Export-Image /SourceImageFile:w11_esd\install_w11.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
+        dism /Export-Image /SourceImageFile:w10_22h2_esd\install_w10_22h2.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
+        dism /Export-Image /SourceImageFile:w10_21h2_esd\install_w10_21h2.esd /SourceIndex:1 /DestinationImageFile:final.esd /Compress:recovery
 
     - name: Nomear edições
       shell: cmd
       run: |
-        dism /Set-ImageName /ImageFile:work\final.esd /Index:1 /Name:"Windows 11 23H2 Pro"
-        dism /Set-ImageName /ImageFile:work\final.esd /Index:2 /Name:"Windows 10 22H2 Pro"
-        dism /Set-ImageName /ImageFile:work\final.esd /Index:3 /Name:"Windows 10 21H2 LTSC"
+        dism /Set-ImageName /ImageFile:final.esd /Index:1 /Name:"Windows 11 23H2 Pro"
+        dism /Set-ImageName /ImageFile:final.esd /Index:2 /Name:"Windows 10 22H2 Pro"
+        dism /Set-ImageName /ImageFile:final.esd /Index:3 /Name:"Windows 10 21H2 LTSC"
 
-    - name: Criar ISO final
+    - name: Criar ISO base
       shell: cmd
       run: |
-        copy /y work\final.esd work\w11\sources\install.esd
-        7z a pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso .\work\w11\*
+        mkdir ISO
+        7z x pt-br_windows_11_consumer_editions_version_23h2_updated_oct_2025_x64_dvd_8deeaabd.iso -oISO -y
+        copy /y final.esd ISO\sources\install.esd
 
-    - name: Compactar final
+    - name: Criar ISO final bootável
+      shell: cmd
+      run: |
+        oscdimg -m -o -u2 -udfver102 ISO pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
+
+    - name: Compactar
       shell: cmd
       run: |
         7z a -t7z -mx=9 -v1900m WIMAIOPROLTSC1110ESDW10UI.7z pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
 
-    - name: Release final
+    - name: Release
       uses: ncipollo/release-action@v1
       with:
         tag: AIO-WINDOWS-${{ github.run_number }}
-        name: AIO Windows 11 + 10 ISO
+        name: AIO Windows ISO Final
         artifacts: WIMAIOPROLTSC1110ESDW10UI.7z.*
         token: ${{ secrets.GITHUB_TOKEN }}
