@@ -1,4 +1,4 @@
-name: AIO Windows ISO FINAL (W11 + W10)
+name: AIO Windows FINAL DEFINITIVO
 
 on:
   workflow_dispatch:
@@ -8,14 +8,13 @@ permissions:
 
 jobs:
 
-  w11:
+  build_w11:
     runs-on: windows-latest
     timeout-minutes: 360
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup W11
+    - name: Build W11 ESD
       shell: cmd
       run: |
         choco install 7zip aria2 -y
@@ -29,7 +28,7 @@ jobs:
 
         7z x base.7z.001 -y
         mkdir D:\BASEISO
-        7z x pt-br_windows_11_consumer_editions_version_23h2_updated_oct_2025_x64_dvd_8deeaabd.iso -oD:\BASEISO -y
+        7z x *.iso -oD:\BASEISO -y
 
         mkdir UUP
         7z x w11-23h2-upp.zip -oUUP -y
@@ -46,7 +45,7 @@ jobs:
         cd /d D:\W10UI\Files
         call W10UI.cmd
 
-        copy /y D:\W10UI_ISO\sources\install.esd install_w11.esd
+        copy D:\W10UI_ISO\sources\install.esd install_w11.esd
 
     - uses: actions/upload-artifact@v4
       with:
@@ -54,14 +53,13 @@ jobs:
         path: install_w11.esd
 
 
-  w10_22h2:
+  build_w10_22:
     runs-on: windows-latest
     timeout-minutes: 360
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup W10 22H2
+    - name: Build W10 22H2 ESD
       shell: cmd
       run: |
         choco install 7zip aria2 -y
@@ -75,7 +73,7 @@ jobs:
 
         7z x base.7z.001 -y
         mkdir D:\BASEISO
-        7z x pt-br_windows_10_consumer_editions_version_22h2_updated_oct_2025_x64_dvd_38efd00d.iso -oD:\BASEISO -y
+        7z x *.iso -oD:\BASEISO -y
 
         mkdir UUP
         7z x w10-22h2-upp.zip -oUUP -y
@@ -92,22 +90,21 @@ jobs:
         cd /d D:\W10UI\Files
         call W10UI.cmd
 
-        copy /y D:\W10UI_ISO\sources\install.esd install_w10_22h2.esd
+        copy D:\W10UI_ISO\sources\install.esd install_w10_22.esd
 
     - uses: actions/upload-artifact@v4
       with:
-        name: w10_22h2_esd
-        path: install_w10_22h2.esd
+        name: w10_22_esd
+        path: install_w10_22.esd
 
 
-  w10_21h2:
+  build_w10_21:
     runs-on: windows-latest
     timeout-minutes: 360
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup W10 21H2
+    - name: Build W10 21H2 ESD
       shell: cmd
       run: |
         choco install 7zip aria2 -y
@@ -120,7 +117,7 @@ jobs:
 
         7z x base.7z.001 -y
         mkdir D:\BASEISO
-        7z x pt-br_windows_10_enterprise_ltsc_2021_x64_dvd_f318268e.iso -oD:\BASEISO -y
+        7z x *.iso -oD:\BASEISO -y
 
         mkdir UUP
         7z x w10-21h2-upp.zip -oUUP -y
@@ -137,61 +134,41 @@ jobs:
         cd /d D:\W10UI\Files
         call W10UI.cmd
 
-        copy /y D:\W10UI_ISO\sources\install.esd install_w10_21h2.esd
+        copy D:\W10UI_ISO\sources\install.esd install_w10_21.esd
 
     - uses: actions/upload-artifact@v4
       with:
-        name: w10_21h2_esd
-        path: install_w10_21h2.esd
+        name: w10_21_esd
+        path: install_w10_21.esd
 
 
   final:
     runs-on: windows-latest
-    needs: [w11, w10_22h2, w10_21h2]
+    needs: [build_w11, build_w10_22, build_w10_21]
     timeout-minutes: 360
 
     steps:
-    - uses: actions/checkout@v4
-
-    - run: choco install 7zip -y
-
     - uses: actions/download-artifact@v4
 
-    - name: Unificar ESD
+    - name: Instalar tools
+      run: choco install 7zip windows-adk -y
+
+    - name: Unificar
       shell: cmd
       run: |
         dism /Export-Image /SourceImageFile:w11_esd\install_w11.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
-        dism /Export-Image /SourceImageFile:w10_22h2_esd\install_w10_22h2.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
-        dism /Export-Image /SourceImageFile:w10_21h2_esd\install_w10_21h2.esd /SourceIndex:1 /DestinationImageFile:final.esd /Compress:recovery
+        dism /Export-Image /SourceImageFile:w10_22_esd\install_w10_22.esd /SourceIndex:4 /DestinationImageFile:final.esd /Compress:recovery
+        dism /Export-Image /SourceImageFile:w10_21_esd\install_w10_21.esd /SourceIndex:1 /DestinationImageFile:final.esd /Compress:recovery
 
-    - name: Nomear edições
-      shell: cmd
-      run: |
-        dism /Set-ImageName /ImageFile:final.esd /Index:1 /Name:"Windows 11 23H2 Pro"
-        dism /Set-ImageName /ImageFile:final.esd /Index:2 /Name:"Windows 10 22H2 Pro"
-        dism /Set-ImageName /ImageFile:final.esd /Index:3 /Name:"Windows 10 21H2 LTSC"
-
-    - name: Criar ISO base
+    - name: Criar ISO final
       shell: cmd
       run: |
         mkdir ISO
-        7z x pt-br_windows_11_consumer_editions_version_23h2_updated_oct_2025_x64_dvd_8deeaabd.iso -oISO -y
-        copy /y final.esd ISO\sources\install.esd
-
-    - name: Criar ISO final bootável
-      shell: cmd
-      run: |
+        7z x *.iso -oISO -y
+        copy final.esd ISO\sources\install.esd
         oscdimg -m -o -u2 -udfver102 ISO pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
 
     - name: Compactar
       shell: cmd
       run: |
         7z a -t7z -mx=9 -v1900m WIMAIOPROLTSC1110ESDW10UI.7z pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
-
-    - name: Release
-      uses: ncipollo/release-action@v1
-      with:
-        tag: AIO-WINDOWS-${{ github.run_number }}
-        name: AIO Windows ISO Final
-        artifacts: WIMAIOPROLTSC1110ESDW10UI.7z.*
-        token: ${{ secrets.GITHUB_TOKEN }}
