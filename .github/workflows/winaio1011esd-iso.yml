@@ -1,4 +1,4 @@
-name: AIO FINAL WINDOWS (FINAL LIMPO)
+name: AIO FINAL WINDOWS (DEFINITIVO)
 
 on:
   workflow_dispatch:
@@ -91,7 +91,7 @@ jobs:
         del w10_21.7z.*
 
     # =========================
-    # 💿 ISO FINAL (BASE W11)
+    # 💿 ISO FINAL (BOOT FIX)
     # =========================
     - name: Criar ISO final
       shell: cmd
@@ -110,7 +110,9 @@ jobs:
         copy ..\work\final.esd sources\install.esd
         cd ..
 
-        oscdimg -m -o -u2 -udfver102 ISO pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
+        oscdimg -m -o -u2 -udfver102 ^
+        -bootdata:2#p0,e,bISO\boot\etfsboot.com#pEF,e,bISO\efi\microsoft\boot\efisys.bin ^
+        ISO pt-br_windows_11_10_pro_ltsc_aio_update_esd_w10ui.iso
 
     # =========================
     # 📦 COMPACTAR
@@ -129,4 +131,4 @@ jobs:
         tag: AIO-${{ github.run_number }}
         name: AIO Windows Final
         artifacts: WIMAIOPROLTSC1110ESDW10UI.7z.*
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}O 
