@@ -1,4 +1,4 @@
-name: W10 IOT LTSC PTBR DISM FINAL FIXED v2
+name: W10 IOT LTSC PTBR DISM FINAL STABLE v2
 
 on:
   workflow_dispatch:
@@ -17,10 +17,10 @@ jobs:
     - name: LIMPAR
       shell: cmd
       run: |
-        rmdir /s /q D:\ISO 2>nul
-        rmdir /s /q D:\MOUNT 2>nul
-        rmdir /s /q D:\LANG 2>nul
-        rmdir /s /q D:\BOOTLANG 2>nul
+        if exist D:\ISO rmdir /s /q D:\ISO
+        if exist D:\MOUNT rmdir /s /q D:\MOUNT
+        if exist D:\LANG rmdir /s /q D:\LANG
+        if exist D:\BOOTLANG rmdir /s /q D:\BOOTLANG
         del /f /q *.iso 2>nul
 
     - name: Instalar ferramentas
@@ -70,7 +70,7 @@ jobs:
     - name: Separar WinPE
       shell: cmd
       run: |
-        move D:\LANG\*WinPE*.cab D:\BOOTLANG
+        for %%i in (D:\LANG\*WinPE*.cab) do move "%%i" D:\BOOTLANG
 
     - name: INSTALL index 1
       shell: cmd
@@ -100,7 +100,7 @@ jobs:
         dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
         dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
 
-    - name: BOOT index 2 (SETUP)
+    - name: BOOT index 2
       shell: cmd
       run: |
         dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:2 /MountDir:D:\MOUNT
@@ -128,7 +128,7 @@ jobs:
     - name: Release
       uses: ncipollo/release-action@v1
       with:
-        tag: FINAL-PTBR-FIXED-${{ github.run_number }}
-        name: Windows 10 IOT LTSC PTBR FINAL FIXED
+        tag: FINAL-STABLE-${{ github.run_number }}
+        name: Windows 10 IOT LTSC PTBR FINAL STABLE
         artifacts: FINAL.7z.*
         token: ${{ secrets.GITHUB_TOKEN }}
