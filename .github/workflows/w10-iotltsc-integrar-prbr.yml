@@ -1,0 +1,105 @@
+name: W10 IOT LTSC PTBR DISM FINAL
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: LIMPAR
+      shell: cmd
+      run: |
+        rmdir /s /q D:\ISO 2>nul
+        rmdir /s /q D:\MOUNT 2>nul
+        rmdir /s /q D:\LANG 2>nul
+        del /f /q *.iso 2>nul
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+        choco install oscdimg -y
+
+    - name: Criar pastas
+      shell: cmd
+      run: |
+        mkdir D:\ISO
+        mkdir D:\MOUNT
+        mkdir D:\LANG
+
+    - name: Baixar ISO partes
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -o iso.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.001
+        aria2c -x16 -s16 -o iso.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.002
+        aria2c -x16 -s16 -o iso.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.003
+
+    - name: Extrair ISO
+      shell: cmd
+      run: |
+        7z x iso.7z.001 -y
+        7z x *.iso -oD:\ISO -y
+
+    - name: Baixar pacote idioma
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -o lang.zip https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/w10-iotltsc-1288-ptbr-pack/pt-br-pack.zip
+
+    - name: Extrair idioma
+      shell: cmd
+      run: |
+        7z x lang.zip -oD:\LANG -y
+
+    - name: Integrar INSTALL.WIM (index 1)
+      shell: cmd
+      run: |
+        dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:1 /MountDir:D:\MOUNT
+        for %i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%i"
+        dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
+        dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
+        dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
+
+    - name: Integrar INSTALL.WIM (index 2)
+      shell: cmd
+      run: |
+        dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:2 /MountDir:D:\MOUNT
+        for %i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%i"
+        dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
+        dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
+        dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
+
+    - name: Integrar BOOT.WIM (setup PT-BR)
+      shell: cmd
+      run: |
+        dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:2 /MountDir:D:\MOUNT
+        for %i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%i"
+        dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
+        dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
+        dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
+
+    - name: Criar ISO
+      shell: cmd
+      run: |
+        oscdimg -m -o -u2 -udfver102 D:\ISO D:\FINAL.iso
+
+    - name: Compactar
+      shell: cmd
+      run: |
+        7z a -t7z -v1900m FINAL.7z D:\FINAL.iso
+
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: FINAL-PTBR-${{ github.run_number }}
+        name: Windows 10 IOT LTSC PT-BR FINAL
+        artifacts: FINAL.7z.*
+        token: ${{ secrets.GITHUB_TOKEN }}
