@@ -1,4 +1,4 @@
-name: W10 IOT LTSC (Integrar PTBR)
+name: W10 IOT LTSC PTBR DISM FINAL (idiomas)
 
 on:
   workflow_dispatch:
@@ -27,7 +27,6 @@ jobs:
       run: |
         choco install 7zip -y
         choco install aria2 -y
-        choco install oscdimg -y
 
     - name: Criar pastas
       shell: cmd
@@ -47,7 +46,7 @@ jobs:
       shell: cmd
       run: |
         7z x iso.7z.001 -y
-        7z x *.iso -oD:\ISO -y
+        for %%i in (*.iso) do 7z x "%%i" -oD:\ISO -y
 
     - name: Baixar pacote idioma
       shell: cmd
@@ -59,42 +58,42 @@ jobs:
       run: |
         7z x lang.zip -oD:\LANG -y
 
-    - name: Integrar INSTALL.WIM (index 1)
+    - name: Integrar INSTALL.WIM index 1
       shell: cmd
       run: |
         dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:1 /MountDir:D:\MOUNT
-        for %i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%i"
+        for %%i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%i"
         dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
         dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
         dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
 
-    - name: Integrar INSTALL.WIM (index 2)
+    - name: Integrar INSTALL.WIM index 2
       shell: cmd
       run: |
         dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:2 /MountDir:D:\MOUNT
-        for %i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%i"
+        for %%i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%i"
         dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
         dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
         dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
 
-    - name: Integrar BOOT.WIM (setup PT-BR)
+    - name: Integrar BOOT.WIM
       shell: cmd
       run: |
         dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:2 /MountDir:D:\MOUNT
-        for %i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%i"
+        for %%i in (D:\LANG\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%i"
         dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
         dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
         dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
 
-    - name: Criar ISO
+    - name: Criar ISO (via 7zip)
       shell: cmd
       run: |
-        oscdimg -m -o -u2 -udfver102 D:\ISO D:\FINAL.iso
+        7z a -tiso FINAL.iso D:\ISO\*
 
     - name: Compactar
       shell: cmd
       run: |
-        7z a -t7z -v1900m FINAL.7z D:\FINAL.iso
+        7z a -t7z -v1900m FINAL.7z FINAL.iso
 
     - name: Release
       uses: ncipollo/release-action@v1
