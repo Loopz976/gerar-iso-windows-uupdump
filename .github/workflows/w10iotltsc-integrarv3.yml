@@ -1,0 +1,135 @@
+name: W10 IOT LTSC PTBR FULL FINAL v3
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: LIMPAR
+      shell: cmd
+      run: |
+        dism /Cleanup-Mountpoints
+        rmdir /s /q D:\ISO 2>nul
+        rmdir /s /q D:\MOUNT 2>nul
+        rmdir /s /q D:\LANG 2>nul
+        del /f /q *.iso 2>nul
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+        choco install windows-adk -y --package-parameters "/features OptionId.DeploymentTools"
+
+    - name: Criar pastas
+      shell: cmd
+      run: |
+        mkdir D:\ISO
+        mkdir D:\MOUNT
+        mkdir D:\LANG
+
+    - name: Baixar ISO
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -o iso.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.001
+        aria2c -x16 -s16 -o iso.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.002
+        aria2c -x16 -s16 -o iso.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.003
+
+    - name: Extrair ISO
+      shell: cmd
+      run: |
+        7z x iso.7z.001 -y
+        for %%i in (*.iso) do 7z x "%%i" -oD:\ISO -y
+
+    - name: Converter ESD para WIM
+      shell: cmd
+      run: |
+        if exist D:\ISO\sources\install.esd (
+          dism /Export-Image /SourceImageFile:D:\ISO\sources\install.esd /All /DestinationImageFile:D:\ISO\sources\install.wim /Compress:max
+          del D:\ISO\sources\install.esd
+        )
+
+    - name: Baixar idioma
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -o lang.zip https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/w10-iotltsc-1288-ptbr-pack/pt-br-pack.zip
+
+    - name: Extrair idioma
+      shell: cmd
+      run: |
+        7z x lang.zip -oD:\LANG -y
+
+    # =========================
+    # BOOT.WIM (WinPE + Setup)
+    # =========================
+    - name: Integrar boot.wim completo
+      shell: cmd
+      run: |
+        for %%i in (1 2) do (
+          dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:%%i /MountDir:D:\MOUNT
+
+          for %%p in (D:\LANG\BOOT\Microsoft-Windows-WinPE-LanguagePack*.cab) do dism /Image:D:\MOUNT /Add-Package:"%%p"
+          for %%p in (D:\LANG\BOOT\WinPE-Setup*.cab) do dism /Image:D:\MOUNT /Add-Package:"%%p"
+
+          dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
+        )
+
+    # =========================
+    # INSTALL.WIM (TODOS INDEX)
+    # =========================
+    - name: Integrar install.wim completo
+      shell: cmd
+      run: |
+        for /l %%i in (1,1,10) do (
+          dism /Get-WimInfo /WimFile:D:\ISO\sources\install.wim /index:%%i >nul 2>&1
+          if not errorlevel 1 (
+
+            echo ==== INDEX %%i ====
+
+            dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:%%i /MountDir:D:\MOUNT
+
+            for %%p in (D:\LANG\INSTALL\*.cab) do (
+              dism /Image:D:\MOUNT /Add-Package:"%%p"
+            )
+
+            dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
+            dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
+
+            dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
+          )
+        )
+
+    - name: Converter WIM para ESD final
+      shell: cmd
+      run: |
+        dism /Export-Image /SourceImageFile:D:\ISO\sources\install.wim /All /DestinationImageFile:D:\ISO\sources\install.esd /Compress:recovery
+        del D:\ISO\sources\install.wim
+
+    - name: Criar ISO bootável
+      shell: cmd
+      run: |
+        oscdimg -m -o -u2 -udfver102 ^
+        -bootdata:2#p0,e,bD:\ISO\boot\etfsboot.com#pEF,e,bD:\ISO\efi\microsoft\boot\efisys.bin ^
+        D:\ISO D:\FINAL.iso
+
+    - name: Compactar
+      shell: cmd
+      run: |
+        7z a -t7z -v1900m FINAL.7z FINAL.iso
+
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: FINAL-PTBR-${{ github.run_number }}
+        name: Windows 10 IOT LTSC PT-BR FINAL
+        artifacts: FINAL.7z.*
+        token: ${{ secrets.GITHUB_TOKEN }}
