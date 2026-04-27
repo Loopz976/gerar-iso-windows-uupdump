@@ -1,4 +1,4 @@
-name: W10 IOT LTSC PTBR FINAL CLEAN ESD
+name: Build ISO PT-BR FULL STABLE
 
 on:
   workflow_dispatch:
@@ -8,134 +8,107 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2025
     timeout-minutes: 360
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: LIMPAR
-      shell: cmd
-      run: |
-        rmdir /s /q D:\ISO 2>nul
-        rmdir /s /q D:\MOUNT 2>nul
-        rmdir /s /q D:\LANG 2>nul
-        del /f /q *.iso 2>nul
+      - name: Instalar ferramentas
+        run: |
+          choco install 7zip -y
+          choco install oscdimg -y
 
-    - name: Instalar ferramentas
-      shell: cmd
-      run: |
-        choco install 7zip -y
-        choco install aria2 -y
-        choco install windows-adk -y --package-parameters "/features OptionId.DeploymentTools"
+      - name: Limpeza total
+        run: |
+          dism /Cleanup-Mountpoints
+          rmdir /s /q D:\ISO 2>nul
+          rmdir /s /q D:\MOUNT 2>nul
+          rmdir /s /q D:\LANG 2>nul
+          del /f /q *.iso 2>nul
 
-    - name: Criar pastas
-      shell: cmd
-      run: |
-        mkdir D:\ISO
-        mkdir D:\MOUNT
-        mkdir D:\LANG
+      - name: Extrair ISO
+        run: |
+          mkdir D:\ISO
+          7z x *.iso -oD:\ISO -y
 
-    - name: Baixar ISO
-      shell: cmd
-      run: |
-        aria2c -x16 -s16 -o iso.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.001
-        aria2c -x16 -s16 -o iso.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.002
-        aria2c -x16 -s16 -o iso.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/W10-IOT-LTSC-PTBR-5/W10-IOT-LTSC-PTBR.7z.003
+      - name: Converter ESD -> WIM (se necessário)
+        run: |
+          if exist D:\ISO\sources\install.esd (
+            dism /Export-Image /SourceImageFile:D:\ISO\sources\install.esd /SourceIndex:1 /DestinationImageFile:D:\ISO\sources\install.wim /Compress:max
+          )
 
-    - name: Extrair ISO
-      shell: cmd
-      run: |
-        7z x iso.7z.001 -y
-        for %%i in (*.iso) do 7z x "%%i" -oD:\ISO -y
+      - name: Extrair idioma
+        run: |
+          mkdir D:\LANG
+          7z x lang.zip -oD:\LANG -y
 
-    # 🔥 DETECTAR E CONVERTER ESD
-    - name: Converter ESD para WIM (se existir)
-      shell: cmd
-      run: |
-        if exist D:\ISO\sources\install.esd (
-          echo Convertendo ESD -> WIM
-          dism /Export-Image /SourceImageFile:D:\ISO\sources\install.esd /All /DestinationImageFile:D:\ISO\sources\install.wim /Compress:max
-          del D:\ISO\sources\install.esd
-        )
+      # =========================
+      # BOOT.WIM
+      # =========================
+      - name: Integrar BOOT.WIM
+        run: |
+          mkdir D:\MOUNT
 
-    - name: Baixar idioma
-      shell: cmd
-      run: |
-        aria2c -x16 -s16 -o lang.zip https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/w10-iotltsc-1288-ptbr-pack/pt-br-pack.zip
+          for %%i in (1 2) do (
+            dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:%%i /MountDir:D:\MOUNT
 
-    - name: Extrair idioma
-      shell: cmd
-      run: |
-        7z x lang.zip -oD:\LANG -y
+            if exist D:\LANG\BOOT\lp.cab (
+              dism /Image:D:\MOUNT /Add-Package /PackagePath:D:\LANG\BOOT\lp.cab
+            )
 
-    # =========================
-    # 🔥 BOOT.WIM
-    # =========================
-    - name: Boot index 1
-      shell: cmd
-      run: |
-        dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:1 /MountDir:D:\MOUNT
-        for %%i in (D:\LANG\BOOT\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%i"
-        dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
-        dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
+            for %%p in (D:\LANG\BOOT\*.cab) do (
+              dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
+            )
 
-    - name: Boot index 2
-      shell: cmd
-      run: |
-        dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:2 /MountDir:D:\MOUNT
-        for %%i in (D:\LANG\BOOT\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%i"
-        dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
-        dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
-
-    # =========================
-    # 🔥 INSTALL.WIM
-    # =========================
-    - name: Integrar install.wim
-      shell: cmd
-      run: |
-        for /l %%i in (1,1,10) do (
-          dism /Get-WimInfo /WimFile:D:\ISO\sources\install.wim /index:%%i >nul 2>&1
-          if not errorlevel 1 (
-            echo ==== INDEX %%i ====
-
-            dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:%%i /MountDir:D:\MOUNT
-
-            for %%p in (D:\LANG\INSTALL\Microsoft-Windows-Client-Language-Pack*.cab) do dism /Image:D:\MOUNT /Add-Package:"%%p"
-            for %%p in (D:\LANG\INSTALL\Microsoft-Windows-LanguageFeatures*.cab) do dism /Image:D:\MOUNT /Add-Package:"%%p"
-
-            dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
-            dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
-
-            dism /Image:D:\MOUNT /Cleanup-Image /StartComponentCleanup /ResetBase
+            dism /Image:D:\MOUNT /Get-Packages | findstr /i pt-BR && (
+              dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
+              dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
+            )
 
             dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
           )
-        )
 
-    # 🔥 VOLTAR PRA ESD (LEVE)
-    - name: Converter WIM para ESD final
-      shell: cmd
-      run: |
-        dism /Export-Image /SourceImageFile:D:\ISO\sources\install.wim /All /DestinationImageFile:D:\ISO\sources\install.esd /Compress:recovery
-        del D:\ISO\sources\install.wim
+      # =========================
+      # INSTALL.WIM
+      # =========================
+      - name: Integrar INSTALL.WIM
+        run: |
+          mkdir D:\MOUNT
 
-    - name: Criar ISO bootável
-      shell: cmd
-      run: |
-        oscdimg -m -o -u2 -udfver102 ^
-        -bootdata:2#p0,e,bD:\ISO\boot\etfsboot.com#pEF,e,bD:\ISO\efi\microsoft\boot\efisys.bin ^
-        D:\ISO D:\FINAL.iso
+          for /l %%i in (1,1,10) do (
+            dism /Get-WimInfo /WimFile:D:\ISO\sources\install.wim /index:%%i >nul 2>&1
+            if not errorlevel 1 (
 
-    - name: Compactar
-      shell: cmd
-      run: |
-        7z a -t7z -v1900m FINAL.7z FINAL.iso
+              echo ==== INDEX %%i ====
 
-    - name: Release
-      uses: ncipollo/release-action@v1
-      with:
-        tag: FINAL-CLEAN-${{ github.run_number }}
-        name: Windows 10 IOT LTSC PT-BR FINAL CLEAN
-        artifacts: FINAL.7z.*
-        token: ${{ secrets.GITHUB_TOKEN }}
+              dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:%%i /MountDir:D:\MOUNT
+
+              for %%p in (D:\LANG\INSTALL\*.cab) do (
+                dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
+              )
+
+              dism /Image:D:\MOUNT /Get-Packages | findstr /i pt-BR && (
+                dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
+                dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
+              )
+
+              dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
+            )
+          )
+
+      # =========================
+      # BUILD ISO
+      # =========================
+      - name: Criar ISO final
+        run: |
+          oscdimg -m -o -u2 -udfver102 D:\ISO D:\windows-ptbr.iso
+
+      # =========================
+      # RELEASE
+      # =========================
+      - name: Upload
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "D:\\windows-ptbr.iso"
+          tag: "iso-final"
