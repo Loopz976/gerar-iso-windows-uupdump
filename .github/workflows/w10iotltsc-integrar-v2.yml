@@ -1,4 +1,4 @@
-name: W10 IOT LTSC PTBR FULL DISM FINAL
+name: W10 IOT LTSC PTBR FULL DISM FINAL v2
 
 on:
   workflow_dispatch:
