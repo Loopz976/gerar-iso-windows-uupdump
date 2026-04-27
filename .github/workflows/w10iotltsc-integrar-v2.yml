@@ -1,4 +1,4 @@
-name: Build ISO PT-BR FULL STABLE
+name: W10 IOT LTSC PTBR FINAL STABLE
 
 on:
   workflow_dispatch:
@@ -8,107 +8,114 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2025
+    runs-on: windows-latest
     timeout-minutes: 360
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Instalar ferramentas
-        run: |
-          choco install 7zip -y
-          choco install oscdimg -y
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
 
-      - name: Limpeza total
-        run: |
-          dism /Cleanup-Mountpoints
-          rmdir /s /q D:\ISO 2>nul
-          rmdir /s /q D:\MOUNT 2>nul
-          rmdir /s /q D:\LANG 2>nul
-          del /f /q *.iso 2>nul
+    - name: Limpeza total
+      shell: cmd
+      run: |
+        dism /Cleanup-Mountpoints
+        rmdir /s /q D:\ISO 2>nul
+        rmdir /s /q D:\MOUNT 2>nul
+        rmdir /s /q D:\LANG 2>nul
+        del /f /q *.iso 2>nul
 
-      - name: Extrair ISO
-        run: |
-          mkdir D:\ISO
-          7z x *.iso -oD:\ISO -y
+    - name: Criar pastas
+      shell: cmd
+      run: |
+        mkdir D:\ISO
+        mkdir D:\MOUNT
+        mkdir D:\LANG
 
-      - name: Converter ESD -> WIM (se necessário)
-        run: |
-          if exist D:\ISO\sources\install.esd (
-            dism /Export-Image /SourceImageFile:D:\ISO\sources\install.esd /SourceIndex:1 /DestinationImageFile:D:\ISO\sources\install.wim /Compress:max
+    - name: Extrair ISO
+      shell: cmd
+      run: |
+        7z x *.iso -oD:\ISO -y
+
+    - name: Converter ESD para WIM (se existir)
+      shell: cmd
+      run: |
+        if exist D:\ISO\sources\install.esd (
+          dism /Export-Image /SourceImageFile:D:\ISO\sources\install.esd /All /DestinationImageFile:D:\ISO\sources\install.wim /Compress:max
+          del D:\ISO\sources\install.esd
+        )
+
+    - name: Extrair idioma
+      shell: cmd
+      run: |
+        7z x lang.zip -oD:\LANG -y
+
+    - name: Integrar BOOT.WIM
+      shell: cmd
+      run: |
+        for %%i in (1 2) do (
+          dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:%%i /MountDir:D:\MOUNT
+
+          for %%p in (D:\LANG\BOOT\*.cab) do (
+            dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
           )
 
-      - name: Extrair idioma
-        run: |
-          mkdir D:\LANG
-          7z x lang.zip -oD:\LANG -y
+          dism /Image:D:\MOUNT /Get-Packages | findstr /i pt-BR >nul && (
+            dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
+            dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
+          )
 
-      # =========================
-      # BOOT.WIM
-      # =========================
-      - name: Integrar BOOT.WIM
-        run: |
-          mkdir D:\MOUNT
+          dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
+        )
 
-          for %%i in (1 2) do (
-            dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:%%i /MountDir:D:\MOUNT
+    - name: Integrar INSTALL.WIM
+      shell: cmd
+      run: |
+        for /l %%i in (1,1,10) do (
+          dism /Get-WimInfo /WimFile:D:\ISO\sources\install.wim /index:%%i >nul 2>&1
+          if not errorlevel 1 (
+            echo ==== INDEX %%i ====
 
-            if exist D:\LANG\BOOT\lp.cab (
-              dism /Image:D:\MOUNT /Add-Package /PackagePath:D:\LANG\BOOT\lp.cab
-            )
+            dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:%%i /MountDir:D:\MOUNT
 
-            for %%p in (D:\LANG\BOOT\*.cab) do (
+            for %%p in (D:\LANG\INSTALL\*.cab) do (
               dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
             )
 
-            dism /Image:D:\MOUNT /Get-Packages | findstr /i pt-BR && (
+            dism /Image:D:\MOUNT /Get-Packages | findstr /i pt-BR >nul && (
               dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
               dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
             )
 
             dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
           )
+        )
 
-      # =========================
-      # INSTALL.WIM
-      # =========================
-      - name: Integrar INSTALL.WIM
-        run: |
-          mkdir D:\MOUNT
+    - name: Converter WIM para ESD final
+      shell: cmd
+      run: |
+        dism /Export-Image /SourceImageFile:D:\ISO\sources\install.wim /All /DestinationImageFile:D:\ISO\sources\install.esd /Compress:recovery
+        del D:\ISO\sources\install.wim
 
-          for /l %%i in (1,1,10) do (
-            dism /Get-WimInfo /WimFile:D:\ISO\sources\install.wim /index:%%i >nul 2>&1
-            if not errorlevel 1 (
+    - name: Criar ISO bootável
+      shell: cmd
+      run: |
+        oscdimg -m -o -u2 -udfver102 ^
+        -bootdata:2#p0,e,bD:\ISO\boot\etfsboot.com#pEF,e,bD:\ISO\efi\microsoft\boot\efisys.bin ^
+        D:\ISO D:\FINAL.iso
 
-              echo ==== INDEX %%i ====
+    - name: Compactar ISO
+      shell: cmd
+      run: |
+        7z a -t7z -v1900m FINAL.7z FINAL.iso
 
-              dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:%%i /MountDir:D:\MOUNT
-
-              for %%p in (D:\LANG\INSTALL\*.cab) do (
-                dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
-              )
-
-              dism /Image:D:\MOUNT /Get-Packages | findstr /i pt-BR && (
-                dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
-                dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
-              )
-
-              dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
-            )
-          )
-
-      # =========================
-      # BUILD ISO
-      # =========================
-      - name: Criar ISO final
-        run: |
-          oscdimg -m -o -u2 -udfver102 D:\ISO D:\windows-ptbr.iso
-
-      # =========================
-      # RELEASE
-      # =========================
-      - name: Upload
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "D:\\windows-ptbr.iso"
-          tag: "iso-final"
+    - name: Criar release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: FINAL.7z.*
+        tag: FINAL-${{ github.run_number }}
+        name: Windows 10 IOT LTSC PTBR FINAL
+        token: ${{ secrets.GITHUB_TOKEN }}
