@@ -66,38 +66,23 @@ jobs:
       run: |
         7z x lang.zip -oD:\LANG -y
 
-    REM =========================
-    REM BOOT.WIM (CORRETO)
-    REM =========================
     - name: Integrar boot.wim
       shell: cmd
       run: |
         for %%i in (1 2) do (
           dism /Mount-Wim /WimFile:D:\ISO\sources\boot.wim /index:%%i /MountDir:D:\MOUNT
-
-          for %%p in (D:\LANG\BOOT\*.cab) do (
-            dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
-          )
-
+          for %%p in (D:\LANG\BOOT\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
           dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
         )
 
-    REM =========================
-    REM INSTALL.WIM (CORRETO)
-    REM =========================
     - name: Integrar install.wim
       shell: cmd
       run: |
         for %%i in (1 2) do (
           dism /Mount-Wim /WimFile:D:\ISO\sources\install.wim /index:%%i /MountDir:D:\MOUNT
-
-          for %%p in (D:\LANG\INSTALL\*.cab) do (
-            dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
-          )
-
+          for %%p in (D:\LANG\INSTALL\*.cab) do dism /Image:D:\MOUNT /Add-Package /PackagePath:"%%p"
           dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
           dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
-
           dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
         )
 
