@@ -65,10 +65,6 @@ jobs:
       run: |
         7z x lang.zip -oD:\LANG -y
 
-    REM =========================
-    REM BOOT.WIM (index 1 e 2)
-    REM =========================
-
     - name: Integrar boot.wim index 1
       shell: cmd
       run: |
@@ -86,10 +82,6 @@ jobs:
         dism /Image:D:\MOUNT /Set-AllIntl:pt-BR
         dism /Image:D:\MOUNT /Set-InputLocale:0416:00010416
         dism /Unmount-Wim /MountDir:D:\MOUNT /Commit
-
-    REM =========================
-    REM INSTALL.WIM (TODOS INDEX)
-    REM =========================
 
     - name: Integrar install.wim todos index
       shell: cmd
