@@ -1,4 +1,4 @@
-name: BUILD ISO AIO FINAL REAL
+name: Gerar ISO All-In-One ESD (10-11)
 
 on:
   workflow_dispatch:
