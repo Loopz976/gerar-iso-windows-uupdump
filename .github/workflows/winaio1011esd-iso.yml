@@ -1,4 +1,4 @@
-name: Gerar ISO All-In-One ESD (10-11)
+name: Gerar ISO Windows All-In-One ESD (10-11)
 
 on:
   workflow_dispatch:
