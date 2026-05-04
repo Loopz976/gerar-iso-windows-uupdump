@@ -70,7 +70,7 @@ jobs:
       shell: cmd
       run: |
         mkdir UUP
-        7z x w10-1809-upp.zip -oUUP -y
+        7z x w10-1809-uup.zip -oUUP -y
         copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
 
     - name: Baixar updates
@@ -130,12 +130,12 @@ jobs:
     - name: Compactar
       shell: cmd
       run: |
-        7z a -tzip -v1900m W101809306ESDISOW10UI.7z "${{ steps.iso.outputs.iso }}"
+        7z a -tzip -v1900m W101809316ESDISOW10UI.7z "${{ steps.iso.outputs.iso }}"
 
     - name: Release
       uses: ncipollo/release-action@v1
       with:
-        tag: W10-1809-306-W10UI-${{ github.run_number }}
-        name: Windows 10 1809 306 Update ESD-ISO-W10UI
-        artifacts: W101809306ESDISOW10UI.7z.*
+        tag: W10-1809-316-W10UI-${{ github.run_number }}
+        name: Windows 10 1809 316 Update ESD-ISO-W10UI
+        artifacts: W101809316ESDISOW10UI.7z.*
         token: ${{ secrets.GITHUB_TOKEN }}
