@@ -70,7 +70,7 @@ jobs:
       shell: cmd
       run: |
         mkdir UUP
-        7z x w10-1809-uup.zip -oUUP -y
+        7z x w10-1809-upp.zip -oUUP -y
         copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
 
     - name: Baixar updates
