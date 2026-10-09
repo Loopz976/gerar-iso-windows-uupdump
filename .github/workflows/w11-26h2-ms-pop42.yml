@@ -1,0 +1,244 @@
+name: Win 11 26H2 - ISO-ESD-W10UI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: LIMPAR AMBIENTE TOTAL
+      shell: cmd
+      run: |
+        rmdir /s /q D:\W10UI 2>nul
+        rmdir /s /q D:\BASEISO 2>nul
+        rmdir /s /q D:\WIN11_ORIGINAL 2>nul
+        rmdir /s /q D:\W10UI_TEMP 2>nul
+        rmdir /s /q D:\W10UI_MNT 2>nul
+        rmdir /s /q D:\W10UI_MRE 2>nul
+        rmdir /s /q D:\W10UI_ISO 2>nul
+        rmdir /s /q UUP 2>nul
+        del /f /q *.iso 2>nul
+        del /f /q Win11-26H2-Original.7z.* 2>nul
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+
+    - name: Criar pastas curtas
+      shell: cmd
+      run: |
+        mkdir D:\W10UI
+        mkdir D:\BASEISO
+        mkdir D:\WIN11_ORIGINAL
+
+    - name: Extrair W10UI base
+      shell: cmd
+      run: |
+        7z x W10UI_RAIZ.zip -oD:\W10UI -y
+
+        if not exist D:\W10UI\Files\W10UI.cmd (
+          echo ERRO: W10UI.cmd nao encontrado
+          exit /b 1
+        )
+
+    - name: Baixar partes da ISO original
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -o Win11-26H2-Original.7z.001 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/win11-26h2-original/Win11-26H2-Original.7z.001
+        aria2c -x16 -s16 -o Win11-26H2-Original.7z.002 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/win11-26h2-original/Win11-26H2-Original.7z.002
+        aria2c -x16 -s16 -o Win11-26H2-Original.7z.003 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/win11-26h2-original/Win11-26H2-Original.7z.003
+        aria2c -x16 -s16 -o Win11-26H2-Original.7z.004 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/win11-26h2-original/Win11-26H2-Original.7z.004
+        aria2c -x16 -s16 -o Win11-26H2-Original.7z.005 https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/win11-26h2-original/Win11-26H2-Original.7z.005
+
+        if errorlevel 1 (
+          echo ERRO: falha ao baixar as partes da ISO
+          exit /b 1
+        )
+
+    - name: Extrair ISO original
+      shell: cmd
+      run: |
+        7z t Win11-26H2-Original.7z.001
+
+        if errorlevel 1 (
+          echo ERRO: partes da ISO invalidas ou incompletas
+          exit /b 1
+        )
+
+        7z x Win11-26H2-Original.7z.001 -oD:\WIN11_ORIGINAL -y
+
+        if errorlevel 1 (
+          echo ERRO: falha ao extrair a ISO original
+          exit /b 1
+        )
+
+        if not exist D:\WIN11_ORIGINAL\Windows11-Original.iso (
+          echo ERRO: Windows11-Original.iso nao encontrado
+          exit /b 1
+        )
+
+    - name: Extrair ISO para BASEISO
+      shell: cmd
+      run: |
+        7z x D:\WIN11_ORIGINAL\Windows11-Original.iso -oD:\BASEISO -y
+
+        if errorlevel 1 (
+          echo ERRO: falha ao extrair o conteudo da ISO
+          exit /b 1
+        )
+
+    - name: Validar WIM ou ESD
+      shell: cmd
+      run: |
+        if exist D:\BASEISO\sources\install.wim (
+          dism /Get-WimInfo /WimFile:D:\BASEISO\sources\install.wim
+          if errorlevel 1 exit /b 1
+        ) else (
+          if exist D:\BASEISO\sources\install.esd (
+            dism /Get-WimInfo /WimFile:D:\BASEISO\sources\install.esd
+            if errorlevel 1 exit /b 1
+          ) else (
+            echo ERRO: install.wim ou install.esd nao encontrado
+            exit /b 1
+          )
+        )
+
+    - name: Preparar UUP
+      shell: cmd
+      run: |
+        if not exist w11-26h2-upp.zip (
+          echo ERRO: w11-26h2-upp.zip nao encontrado
+          exit /b 1
+        )
+
+        mkdir UUP
+        7z x w11-26h2-upp.zip -oUUP -y
+
+        if errorlevel 1 (
+          echo ERRO: falha ao extrair UUP
+          exit /b 1
+        )
+
+        if not exist UUP\uup_download_windows.cmd (
+          echo ERRO: uup_download_windows.cmd nao encontrado
+          exit /b 1
+        )
+
+        copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
+
+    - name: Baixar updates
+      shell: cmd
+      working-directory: UUP
+      run: |
+        call uup_download_windows.cmd
+
+        if errorlevel 1 (
+          echo ERRO: falha ao baixar ou processar os arquivos UUP
+          exit /b 1
+        )
+
+    - name: Copiar updates
+      shell: cmd
+      run: |
+        if not exist UUP\UUPs (
+          echo ERRO: pasta UUP\UUPs nao encontrada
+          exit /b 1
+        )
+
+        xcopy UUP\UUPs\* D:\W10UI\Files\ /E /H /C /I /Y
+
+    - name: Preparar dirs W10UI
+      shell: cmd
+      run: |
+        mkdir D:\W10UI_TEMP
+        mkdir D:\W10UI_MNT
+        mkdir D:\W10UI_MRE
+        mkdir D:\W10UI_ISO
+
+    - name: Ajustar INI COMPLETO
+      shell: powershell
+      run: |
+        $ErrorActionPreference = "Stop"
+
+        $ini = "D:\W10UI\Files\W10UI.ini"
+
+        if (!(Test-Path $ini)) {
+          throw "W10UI.ini não encontrado."
+        }
+
+        $txt = Get-Content $ini -Raw
+
+        $txt = $txt -replace '(?im)^Target\s*=.*$', 'Target        =D:\BASEISO'
+        $txt = $txt -replace '(?im)^Repo\s*=.*$', 'Repo          =D:\W10UI\Files'
+        $txt = $txt -replace '(?im)^MountDir\s*=.*$', 'MountDir      =D:\W10UI_MNT'
+        $txt = $txt -replace '(?im)^WinreMount\s*=.*$', 'WinreMount    =D:\W10UI_MRE'
+        $txt = $txt -replace '(?im)^_CabDir\s*=.*$', '_CabDir       =D:\W10UI_TEMP'
+        $txt = $txt -replace '(?im)^ISODir\s*=.*$', 'ISODir        =D:\W10UI_ISO'
+        $txt = $txt -replace '(?im)^AutoStart\s*=.*$', 'AutoStart     =1'
+        $txt = $txt -replace '(?im)^ISO\s*=.*$', 'ISO           =1'
+
+        Set-Content $ini $txt -Encoding ASCII
+
+    - name: Limpeza DISM
+      shell: cmd
+      run: |
+        dism /Cleanup-Wim
+
+    - name: Rodar W10UI
+      shell: cmd
+      working-directory: D:\W10UI\Files
+      run: |
+        call W10UI.cmd
+
+        if errorlevel 1 (
+          echo ERRO: W10UI falhou
+          exit /b 1
+        )
+
+    - name: Pegar ISO final
+      id: iso
+      shell: powershell
+      run: |
+        $iso = Get-ChildItem D:\W10UI_ISO -Filter *.iso -File -Recurse |
+          Sort-Object LastWriteTime -Descending |
+          Select-Object -First 1
+
+        if (!$iso) {
+          throw "ISO final não encontrada."
+        }
+
+        "iso=$($iso.FullName)" |
+          Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - name: Compactar ISO final
+      shell: cmd
+      run: |
+        7z a -t7z -mx=1 -v1900m Win1126H2W10UI.7z "${{ steps.iso.outputs.iso }}"
+
+        if errorlevel 1 (
+          echo ERRO: falha ao compactar a ISO final
+          exit /b 1
+        )
+
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: WIN11-26H2-W10UI-${{ github.run_number }}
+        name: Windows 11 26H2 Update ISO W10UI Build ${{ github.run_number }}
+        body: |
+          ISO do Windows 11 processada pelo W10UI.
+          Base: ISO original publicada na Release win11-26h2-original.
+          Atualizações: pacote w11-26h2-upp.zip.
+        artifacts: Win1126H2W10UI.7z.*
+        artifactErrorsFailBuild: true
+        token: ${{ secrets.GITHUB_TOKEN }}
