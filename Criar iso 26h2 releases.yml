@@ -27,16 +27,13 @@ jobs:
             throw "7-Zip não encontrado."
           }
 
-          "SEVENZIP=$sevenZip" >> $env:GITHUB_ENV
+          "SEVENZIP=$sevenZip" | Out-File $env:GITHUB_ENV -Append
 
       - name: Preparar ambiente
         shell: pwsh
         run: |
-          New-Item -ItemType Directory `
-            -Path "D:\WIN11_ISO" -Force | Out-Null
-
-          New-Item -ItemType Directory `
-            -Path "D:\WIN11_RELEASE" -Force | Out-Null
+          New-Item -ItemType Directory -Path "D:\WIN11_ISO" -Force | Out-Null
+          New-Item -ItemType Directory -Path "D:\WIN11_RELEASE" -Force | Out-Null
 
       - name: Baixar ISO original da Microsoft
         shell: pwsh
@@ -47,22 +44,14 @@ jobs:
 
           $iso = "D:\WIN11_ISO\Windows11-Original.iso"
 
-          Write-Host "Iniciando download da ISO original..."
-
-          curl.exe `
-            --fail `
-            --location `
-            --retry 3 `
-            --retry-delay 5 `
-            --output "$iso" `
-            "$url"
+          curl.exe --fail --location --retry 3 --retry-delay 5 --output "$iso" "$url"
 
           if ($LASTEXITCODE -ne 0) {
-            throw "Falha ao baixar a ISO. O link pode ter expirado."
+            throw "Falha no download. O link da Microsoft pode ter expirado."
           }
 
           if (!(Test-Path $iso)) {
-            throw "Arquivo ISO não encontrado."
+            throw "ISO não encontrada."
           }
 
           $file = Get-Item $iso
@@ -71,11 +60,9 @@ jobs:
             throw "Download inválido: arquivo menor que 1 GB."
           }
 
-          Write-Host "Download concluído."
           Write-Host "Tamanho: $([math]::Round($file.Length / 1GB, 2)) GB"
 
           $hash = Get-FileHash $iso -Algorithm SHA256
-
           Write-Host "SHA256: $($hash.Hash)"
 
       - name: Validar ISO
@@ -95,18 +82,17 @@ jobs:
 
           try {
             $volume = $disk | Get-Volume
-
             $drive = "$($volume.DriveLetter):"
 
             if (!(Test-Path "$drive\sources\boot.wim")) {
-              throw "ISO inválida: sources\boot.wim não encontrado."
+              throw "sources\boot.wim não encontrado."
             }
 
             if (
               !(Test-Path "$drive\sources\install.wim") -and
               !(Test-Path "$drive\sources\install.esd")
             ) {
-              throw "ISO inválida: install.wim/install.esd não encontrado."
+              throw "install.wim/install.esd não encontrado."
             }
 
             Write-Host "Estrutura da ISO validada."
@@ -121,26 +107,17 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           $iso = "D:\WIN11_ISO\Windows11-Original.iso"
-
           $output = "D:\WIN11_RELEASE\Win11-26H2-Original.7z"
 
-          Write-Host "Compactando e dividindo a ISO..."
-
-          & $env:SEVENZIP a `
-            -t7z `
-            -mx=1 `
-            -v1900m `
-            $output `
-            $iso
+          & $env:SEVENZIP a -t7z -mx=1 -v1900m $output $iso
 
           if ($LASTEXITCODE -ne 0) {
             throw "Falha na compactação."
           }
 
           $parts = @(
-            Get-ChildItem "D:\WIN11_RELEASE\Win11-26H2-Original.7z.*" `
-              -File |
-              Sort-Object Name
+            Get-ChildItem "D:\WIN11_RELEASE\Win11-26H2-Original.7z.*" -File |
+            Sort-Object Name
           )
 
           if ($parts.Count -eq 0) {
@@ -179,12 +156,8 @@ jobs:
           name: Windows 11 - ISO Original Microsoft
           body: |
             ISO original do Windows 11 em português do Brasil.
-
             Origem: servidor de download da Microsoft.
             Formato: arquivo 7z dividido em partes de aproximadamente 1900 MB.
-
-            A versão e a compilação efetivas devem ser verificadas
-            antes de utilizar esta imagem como base de atualização.
           artifacts: D:/WIN11_RELEASE/Win11-26H2-Original.7z.*
           artifactErrorsFailBuild: true
           allowUpdates: true
