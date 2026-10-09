@@ -1,4 +1,4 @@
-name: Win 11 26H2 POP42 - ISO-ESD-W10UI
+name: Win 11 26H2 HSL - POP42 - ISO-ESD-W10UI
 
 on:
   workflow_dispatch:
