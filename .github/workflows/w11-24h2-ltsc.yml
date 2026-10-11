@@ -36,18 +36,16 @@ jobs:
     - name: Criar pastas de trabalho
       shell: cmd
       run: |
-        mkdir D:\W10UI
-        mkdir D:\BASEISO
-        mkdir D:\W10UI_TEMP
-        mkdir D:\W10UI_MNT
-        mkdir D:\W10UI_MRE
-        mkdir D:\W10UI_ISO
-        mkdir UUP
+        if not exist D:\W10UI mkdir D:\W10UI
+        if not exist D:\BASEISO mkdir D:\BASEISO
+        if not exist UUP mkdir UUP
 
     - name: Extrair W10UI base
       shell: cmd
       run: |
         7z x W10UI_RAIZ.zip -oD:\W10UI -y
+
+        if errorlevel 1 exit /b 1
 
         if not exist D:\W10UI\Files\W10UI.cmd (
           echo ERRO: W10UI.cmd nao encontrado.
@@ -111,7 +109,7 @@ jobs:
       shell: cmd
       run: |
         if not exist w11-24h2-ltsc-upp.zip (
-          echo ERRO: w11-24h2-ltsc-upp.zip nao encontrado no repositorio.
+          echo ERRO: w11-24h2-ltsc-upp.zip nao encontrado.
           exit /b 1
         )
 
@@ -120,7 +118,7 @@ jobs:
         if errorlevel 1 exit /b 1
 
         if not exist UUP\uup_download_windows.cmd (
-          echo ERRO: uup_download_windows.cmd nao encontrado.
+          echo ERRO: script UUP nao encontrado.
           exit /b 1
         )
 
@@ -151,10 +149,10 @@ jobs:
     - name: Preparar dirs W10UI
       shell: cmd
       run: |
-        mkdir D:\W10UI_TEMP
-        mkdir D:\W10UI_MNT
-        mkdir D:\W10UI_MRE
-        mkdir D:\W10UI_ISO
+        if not exist D:\W10UI_TEMP mkdir D:\W10UI_TEMP
+        if not exist D:\W10UI_MNT mkdir D:\W10UI_MNT
+        if not exist D:\W10UI_MRE mkdir D:\W10UI_MRE
+        if not exist D:\W10UI_ISO mkdir D:\W10UI_ISO
 
     - name: Ajustar INI COMPLETO
       shell: powershell
