@@ -1,0 +1,218 @@
+name: Windows 11 Enterprise LTSC 2024 - ISO-ESD-W10UI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: LIMPAR AMBIENTE TOTAL
+      shell: cmd
+      run: |
+        rmdir /s /q D:\W10UI 2>nul
+        rmdir /s /q D:\BASEISO 2>nul
+        rmdir /s /q UUP 2>nul
+        rmdir /s /q D:\W10UI_TEMP 2>nul
+        rmdir /s /q D:\W10UI_MNT 2>nul
+        rmdir /s /q D:\W10UI_MRE 2>nul
+        rmdir /s /q D:\W10UI_ISO 2>nul
+        del /f /q *.iso 2>nul
+        del /f /q base.7z.* 2>nul
+
+    - name: Instalar ferramentas
+      shell: cmd
+      run: |
+        choco install 7zip -y
+        choco install aria2 -y
+
+    - name: Criar pasta curta
+      shell: cmd
+      run: |
+        mkdir D:\W10UI
+
+    - name: Extrair W10UI base (CURTO)
+      shell: cmd
+      run: |
+        7z x W10UI_RAIZ.zip -oD:\W10UI -y
+
+        if not exist D:\W10UI\Files\W10UI.cmd (
+          echo ERRO W10UI
+          exit /b 1
+        )
+
+    - name: Baixar ISO original LTSC 2024
+      shell: cmd
+      run: |
+        aria2c -x16 -s16 -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.001
+        if errorlevel 1 exit /b 1
+
+        aria2c -x16 -s16 -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.002
+        if errorlevel 1 exit /b 1
+
+        aria2c -x16 -s16 -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.003
+        if errorlevel 1 exit /b 1
+
+    - name: Extrair ISO
+      shell: cmd
+      run: |
+        7z t base.7z.001
+        if errorlevel 1 exit /b 1
+
+        7z x base.7z.001 -y
+        if errorlevel 1 exit /b 1
+
+        if not exist pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.iso (
+          echo ERRO: ISO nao encontrada
+          exit /b 1
+        )
+
+    - name: Extrair ISO para BASEISO (CURTO)
+      shell: cmd
+      run: |
+        mkdir D:\BASEISO
+        7z x pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.iso -oD:\BASEISO -y
+
+        if errorlevel 1 exit /b 1
+
+    - name: Validar WIM
+      shell: cmd
+      run: |
+        dism /Get-WimInfo /WimFile:D:\BASEISO\sources\install.wim
+
+        if errorlevel 1 exit /b 1
+
+    - name: Preparar UUP
+      shell: cmd
+      run: |
+        mkdir UUP
+        7z x w11-24h2-ltsc-upp.zip -oUUP -y
+
+        if errorlevel 1 exit /b 1
+
+        if not exist UUP\uup_download_windows.cmd (
+          echo ERRO: script UUP nao encontrado
+          exit /b 1
+        )
+
+        copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
+
+    - name: Baixar updates
+      shell: cmd
+      working-directory: UUP
+      run: |
+        call uup_download_windows.cmd
+
+        if errorlevel 1 exit /b 1
+
+    - name: Copiar updates
+      shell: cmd
+      run: |
+        if not exist UUP\UUPs (
+          echo ERRO: pasta UUPs nao encontrada
+          exit /b 1
+        )
+
+        xcopy UUP\UUPs\* D:\W10UI\Files\ /E /H /C /I /Y
+
+    - name: Preparar dirs W10UI (ESSENCIAL)
+      shell: cmd
+      run: |
+        mkdir D:\W10UI_TEMP
+        mkdir D:\W10UI_MNT
+        mkdir D:\W10UI_MRE
+        mkdir D:\W10UI_ISO
+
+    - name: Ajustar INI COMPLETO
+      shell: powershell
+      run: |
+        $ErrorActionPreference = "Stop"
+        $ini = "D:\W10UI\Files\W10UI.ini"
+
+        if (!(Test-Path $ini)) {
+          throw "W10UI.ini nao encontrado"
+        }
+
+        $txt = Get-Content $ini -Raw
+        $txt = $txt -replace '(?im)^Target\s*=.*$', 'Target        =D:\BASEISO'
+        $txt = $txt -replace '(?im)^Repo\s*=.*$', 'Repo          =D:\W10UI\Files'
+        $txt = $txt -replace '(?im)^MountDir\s*=.*$', 'MountDir      =D:\W10UI_MNT'
+        $txt = $txt -replace '(?im)^WinreMount\s*=.*$', 'WinreMount    =D:\W10UI_MRE'
+        $txt = $txt -replace '(?im)^_CabDir\s*=.*$', '_CabDir       =D:\W10UI_TEMP'
+        $txt = $txt -replace '(?im)^ISODir\s*=.*$', 'ISODir        =D:\W10UI_ISO'
+        $txt = $txt -replace '(?im)^AutoStart\s*=.*$', 'AutoStart     =1'
+        $txt = $txt -replace '(?im)^ISO\s*=.*$', 'ISO           =1'
+
+        Set-Content $ini $txt -Encoding ASCII
+
+    - name: Limpeza DISM
+      shell: cmd
+      run: |
+        dism /Cleanup-Wim
+
+    - name: Rodar W10UI
+      shell: cmd
+      working-directory: D:\W10UI\Files
+      run: |
+        call W10UI.cmd
+
+        if errorlevel 1 exit /b 1
+
+    - name: Pegar ISO final
+      id: iso
+      shell: powershell
+      run: |
+        $ErrorActionPreference = "Stop"
+
+        $iso = Get-ChildItem D:\W10UI_ISO -Filter *.iso -File |
+          Sort-Object LastWriteTime -Descending |
+          Select-Object -First 1
+
+        if (!$iso) {
+          throw "Nenhuma ISO final foi gerada."
+        }
+
+        Write-Host "ISO: $($iso.FullName)"
+        Write-Host "Tamanho: $([math]::Round($iso.Length / 1GB, 2)) GB"
+        Write-Host "SHA256: $((Get-FileHash $iso.FullName -Algorithm SHA256).Hash)"
+
+        "iso=$($iso.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - name: Compactar
+      shell: cmd
+      run: |
+        7z a -t7z -mx=1 -v1900m Windows11LTSC2024ESDW10UI.7z "${{ steps.iso.outputs.iso }}"
+
+        if errorlevel 1 exit /b 1
+
+    - name: Validar arquivo dividido
+      shell: cmd
+      run: |
+        7z t Windows11LTSC2024ESDW10UI.7z.001
+
+        if errorlevel 1 exit /b 1
+
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: windows-11-ltsc-2024-w10ui-${{ github.run_number }}
+        name: Windows 11 Enterprise LTSC 2024 - Update ESD ISO W10UI
+        body: |
+          Windows 11 Enterprise LTSC 2024 x64.
+          Idioma: Português do Brasil.
+          Base: ISO LTSC 2024 original.
+          Atualizações integradas com W10UI.
+          Arquivo 7z dividido em partes de aproximadamente 1900 MB.
+          SHA256 da ISO final disponível nos logs do workflow.
+        artifacts: Windows11LTSC2024ESDW10UI.7z.*
+        artifactErrorsFailBuild: true
+        allowUpdates: true
+        replacesArtifacts: true
+        token: ${{ secrets.GITHUB_TOKEN }}
