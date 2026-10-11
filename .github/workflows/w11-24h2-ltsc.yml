@@ -33,51 +33,64 @@ jobs:
         choco install 7zip -y
         choco install aria2 -y
 
-    - name: Criar pasta curta
+    - name: Criar pastas de trabalho
       shell: cmd
       run: |
         mkdir D:\W10UI
+        mkdir D:\BASEISO
+        mkdir D:\W10UI_TEMP
+        mkdir D:\W10UI_MNT
+        mkdir D:\W10UI_MRE
+        mkdir D:\W10UI_ISO
+        mkdir UUP
 
-    - name: Extrair W10UI base (CURTO)
+    - name: Extrair W10UI base
       shell: cmd
       run: |
         7z x W10UI_RAIZ.zip -oD:\W10UI -y
 
         if not exist D:\W10UI\Files\W10UI.cmd (
-          echo ERRO W10UI
+          echo ERRO: W10UI.cmd nao encontrado.
           exit /b 1
         )
 
     - name: Baixar ISO original LTSC 2024
       shell: cmd
       run: |
-        aria2c -x16 -s16 -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.001
+        aria2c -x16 -s16 -k1M --retry-wait=5 --max-tries=5 -o base.7z.001 "https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.001"
         if errorlevel 1 exit /b 1
 
-        aria2c -x16 -s16 -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.002
+        aria2c -x16 -s16 -k1M --retry-wait=5 --max-tries=5 -o base.7z.002 "https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.002"
         if errorlevel 1 exit /b 1
 
-        aria2c -x16 -s16 -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.003
+        aria2c -x16 -s16 -k1M --retry-wait=5 --max-tries=5 -o base.7z.003 "https://github.com/Loopz976/gerar-iso-windows-uupdump/releases/download/windows-11-enterprise-ltsc-2024-original/pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.7z.003"
         if errorlevel 1 exit /b 1
 
-    - name: Extrair ISO
+    - name: Validar arquivo compactado original
       shell: cmd
       run: |
         7z t base.7z.001
-        if errorlevel 1 exit /b 1
 
-        7z x base.7z.001 -y
-        if errorlevel 1 exit /b 1
-
-        if not exist pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.iso (
-          echo ERRO: ISO nao encontrada
+        if errorlevel 1 (
+          echo ERRO: arquivo dividido incompleto ou invalido.
           exit /b 1
         )
 
-    - name: Extrair ISO para BASEISO (CURTO)
+    - name: Extrair ISO original
       shell: cmd
       run: |
-        mkdir D:\BASEISO
+        7z x base.7z.001 -y
+
+        if errorlevel 1 exit /b 1
+
+        if not exist pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.iso (
+          echo ERRO: ISO original nao encontrada.
+          exit /b 1
+        )
+
+    - name: Extrair ISO para BASEISO
+      shell: cmd
+      run: |
         7z x pt-br_windows_11_enterprise_ltsc_2024_x64_dvd_2bb6b75b.iso -oD:\BASEISO -y
 
         if errorlevel 1 exit /b 1
@@ -85,6 +98,11 @@ jobs:
     - name: Validar WIM
       shell: cmd
       run: |
+        if not exist D:\BASEISO\sources\install.wim (
+          echo ERRO: install.wim nao encontrado.
+          exit /b 1
+        )
+
         dism /Get-WimInfo /WimFile:D:\BASEISO\sources\install.wim
 
         if errorlevel 1 exit /b 1
@@ -92,19 +110,25 @@ jobs:
     - name: Preparar UUP
       shell: cmd
       run: |
-        mkdir UUP
+        if not exist w11-24h2-ltsc-upp.zip (
+          echo ERRO: w11-24h2-ltsc-upp.zip nao encontrado no repositorio.
+          exit /b 1
+        )
+
         7z x w11-24h2-ltsc-upp.zip -oUUP -y
 
         if errorlevel 1 exit /b 1
 
         if not exist UUP\uup_download_windows.cmd (
-          echo ERRO: script UUP nao encontrado
+          echo ERRO: uup_download_windows.cmd nao encontrado.
           exit /b 1
         )
 
+        if not exist UUP\files mkdir UUP\files
+
         copy /y "%ProgramData%\chocolatey\bin\aria2c.exe" UUP\files\aria2c.exe
 
-    - name: Baixar updates
+    - name: Baixar updates UUP
       shell: cmd
       working-directory: UUP
       run: |
@@ -116,13 +140,15 @@ jobs:
       shell: cmd
       run: |
         if not exist UUP\UUPs (
-          echo ERRO: pasta UUPs nao encontrada
+          echo ERRO: pasta UUPs nao encontrada.
           exit /b 1
         )
 
         xcopy UUP\UUPs\* D:\W10UI\Files\ /E /H /C /I /Y
 
-    - name: Preparar dirs W10UI (ESSENCIAL)
+        if errorlevel 1 exit /b 1
+
+    - name: Preparar dirs W10UI
       shell: cmd
       run: |
         mkdir D:\W10UI_TEMP
@@ -134,23 +160,42 @@ jobs:
       shell: powershell
       run: |
         $ErrorActionPreference = "Stop"
+
         $ini = "D:\W10UI\Files\W10UI.ini"
 
         if (!(Test-Path $ini)) {
-          throw "W10UI.ini nao encontrado"
+          throw "W10UI.ini nao encontrado."
         }
 
         $txt = Get-Content $ini -Raw
-        $txt = $txt -replace '(?im)^Target\s*=.*$', 'Target        =D:\BASEISO'
-        $txt = $txt -replace '(?im)^Repo\s*=.*$', 'Repo          =D:\W10UI\Files'
-        $txt = $txt -replace '(?im)^MountDir\s*=.*$', 'MountDir      =D:\W10UI_MNT'
-        $txt = $txt -replace '(?im)^WinreMount\s*=.*$', 'WinreMount    =D:\W10UI_MRE'
-        $txt = $txt -replace '(?im)^_CabDir\s*=.*$', '_CabDir       =D:\W10UI_TEMP'
-        $txt = $txt -replace '(?im)^ISODir\s*=.*$', 'ISODir        =D:\W10UI_ISO'
-        $txt = $txt -replace '(?im)^AutoStart\s*=.*$', 'AutoStart     =1'
-        $txt = $txt -replace '(?im)^ISO\s*=.*$', 'ISO           =1'
 
-        Set-Content $ini $txt -Encoding ASCII
+        $settings = @{
+          'Target'     = 'D:\BASEISO'
+          'Repo'       = 'D:\W10UI\Files'
+          'MountDir'   = 'D:\W10UI_MNT'
+          'WinreMount' = 'D:\W10UI_MRE'
+          '_CabDir'    = 'D:\W10UI_TEMP'
+          'ISODir'     = 'D:\W10UI_ISO'
+          'AutoStart'  = '1'
+          'ISO'        = '1'
+        }
+
+        foreach ($key in $settings.Keys) {
+          $pattern = "(?im)^" + [regex]::Escape($key) + "\s*=.*$"
+          $replacement = "$key        =$($settings[$key])"
+
+          if ($txt -match $pattern) {
+            $txt = [regex]::Replace($txt, $pattern, $replacement)
+          }
+          else {
+            $txt += "`r`n$replacement"
+          }
+        }
+
+        Set-Content -Path $ini -Value $txt -Encoding ASCII
+
+        Write-Host "Configuracao W10UI:"
+        Get-Content $ini
 
     - name: Limpeza DISM
       shell: cmd
@@ -165,7 +210,7 @@ jobs:
 
         if errorlevel 1 exit /b 1
 
-    - name: Pegar ISO final
+    - name: Validar ISO final
       id: iso
       shell: powershell
       run: |
@@ -176,16 +221,18 @@ jobs:
           Select-Object -First 1
 
         if (!$iso) {
-          throw "Nenhuma ISO final foi gerada."
+          throw "Nenhuma ISO final foi gerada pelo W10UI."
         }
 
-        Write-Host "ISO: $($iso.FullName)"
+        $hash = Get-FileHash $iso.FullName -Algorithm SHA256
+
+        Write-Host "ISO final: $($iso.FullName)"
         Write-Host "Tamanho: $([math]::Round($iso.Length / 1GB, 2)) GB"
-        Write-Host "SHA256: $((Get-FileHash $iso.FullName -Algorithm SHA256).Hash)"
+        Write-Host "SHA256: $($hash.Hash)"
 
         "iso=$($iso.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-    - name: Compactar
+    - name: Compactar ISO em partes de 1900 MB
       shell: cmd
       run: |
         7z a -t7z -mx=1 -v1900m Windows11LTSC2024ESDW10UI.7z "${{ steps.iso.outputs.iso }}"
@@ -195,11 +242,16 @@ jobs:
     - name: Validar arquivo dividido
       shell: cmd
       run: |
+        if not exist Windows11LTSC2024ESDW10UI.7z.001 (
+          echo ERRO: arquivo .001 nao encontrado.
+          exit /b 1
+        )
+
         7z t Windows11LTSC2024ESDW10UI.7z.001
 
         if errorlevel 1 exit /b 1
 
-    - name: Release
+    - name: Publicar Release
       uses: ncipollo/release-action@v1
       with:
         tag: windows-11-ltsc-2024-w10ui-${{ github.run_number }}
