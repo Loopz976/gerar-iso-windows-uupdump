@@ -40,7 +40,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $url = "https://software.download.prss.microsoft.com/dbazure/Windows11_Client_x64_pt-br_26300_9457.iso?t=90f4fe2a-46bb-491c-8b18-511e609e7b35&P1=1791663668&P2=602&P3=2&P4=fa1X4yo%2bCERFj7AaMAclyXAVUm05ID3O6WqSJUOJcwcPshW1Mr%2bXHYlnPEuvpOu4i%2bLTn14%2b5EHr74j908ZU7aZQtLS2kquK7UmpPXwIh%2f9xpEBOJfK2N8a5uAjesXu1cZaSOJ1NjxBeNVcKIQ7WoSMoNnuLI1O9K%2fXBCXEcjW0fLMvw9gJGreeqLNOErfZ1EdIpX4wpf8LOPwA4N%2bwt8Kz%2fJtMOQ4FUJE8igPQnPXVsKd0tMCE8GiG8T75veiz21t7tyoALh16JhO%2fuZLizq%2fUwqsauclYTThpw6Fn2JRWxd6WTUAEGAGs3FnpsskfMFL%2fCRNpBWpv3%2frFYw0CFFw%3d%3d"
+          $url = "https://software.download.prss.microsoft.com/dbazure/Windows11_Client_x64_pt-br_26300_9457.iso?t=39c720dc-4ee7-47f8-954f-948f4a4ee1e9&P1=1792306585&P2=602&P3=2&P4=k%2bivQx6eRe5Ipl%2fDlWpVTfwQsMi0%2f7edmMeca9vE8HSjZeGHY%2bkKwC8fuoXzV9X11Lpn81Dub%2fNXX%2foIiztxdKHdABbEWVBpjkMj0fGP0do0dNfoxWg%2bBCyb6WRQPSRFp2YAz%2feFAWR5Gqg9RziDmYpv9oePXgY8wihejWrH5XyX%2b81fEjh763FUSn7%2brEvpn9hDfZeo1wo0njMWpUS%2fHNGsClRnaV%2bINyM8NprLJmpDcMyjuHpmH36I27%2fMibDtnweThtDfJu32mCJr80RzYTOQKwILcXVs4hwd9TcdFQZS6DTHMqPPfC3x6hwbGi9BoA66cZNk2gmtutZV3v9TfA%3d%3d"
 
           $iso = "D:\WIN11_ISO\Windows11-Original.iso"
 
