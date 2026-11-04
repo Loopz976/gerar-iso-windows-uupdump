@@ -50,6 +50,7 @@ jobs:
         aria2c -x16 -s16 -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.002
         aria2c -x16 -s16 -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.003
         aria2c -x16 -s16 -o base.7z.004 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.004
+        aria2c -x16 -s16 -o base.7z.004 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.005
 
     - name: Extrair ISO
       shell: cmd
