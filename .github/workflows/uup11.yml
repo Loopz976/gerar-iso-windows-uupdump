@@ -1,4 +1,4 @@
-name: ISO Windows 11 (uupdump.net)
+name: Win 11 (uupdump.net) ISO
 
 on:
   workflow_dispatch:
