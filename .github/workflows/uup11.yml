@@ -1,4 +1,4 @@
-name: Gerar ISO Windows 11 (UUP)
+name: ISO Windows 11 (uupdump.net)
 
 on:
   workflow_dispatch:
