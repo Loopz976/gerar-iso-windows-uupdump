@@ -1,4 +1,4 @@
-name: Win 10 1809 - ISO-ESD-W10UI (LTSC)
+name: Win 10 1809 316 - ISO-ESD-W10UI (LTSC)
 
 on:
   workflow_dispatch:
