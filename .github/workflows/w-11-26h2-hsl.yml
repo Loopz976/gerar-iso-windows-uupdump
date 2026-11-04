@@ -1,5 +1,5 @@
 
-name: Win 11 26H2 9457 - ISO-ESD-W10UI (HSL)
+name: Win 11 26H2 9457 - ISO-WIM-W10UI (HSL)
 
 on:
   workflow_dispatch:
