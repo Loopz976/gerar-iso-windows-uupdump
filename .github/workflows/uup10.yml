@@ -1,4 +1,4 @@
-name: Gerar ISO Windows 10 (UUP)
+name: ISO Windows 10 (uupdump.net)
 
 on:
   workflow_dispatch:
