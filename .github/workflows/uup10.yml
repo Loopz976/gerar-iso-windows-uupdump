@@ -1,4 +1,4 @@
-name: ISO Windows 10 (uupdump.net)
+name: Win10 (uupdump.net) ISO
 
 on:
   workflow_dispatch:
