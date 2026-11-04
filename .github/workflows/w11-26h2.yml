@@ -1,4 +1,4 @@
-name: Win 11 26H2 9457 - ISO-ESD-W10UI
+name: Win 11 26H2 9457 - ISO-ESD-W10UI (Todos)
 
 on:
   workflow_dispatch:
