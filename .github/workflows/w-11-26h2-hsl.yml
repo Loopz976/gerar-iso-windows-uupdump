@@ -37,7 +37,7 @@ jobs:
     - name: Extrair W10UI base (CURTO)
       shell: cmd
       run: |
-        7z x W10UI_RAIZ.zip -oD:\W10UI -y
+        7z x W10UI_RAIZ_WIM.zip -oD:\W10UI -y
 
         if not exist D:\W10UI\Files\W10UI.cmd (
           echo ERRO W10UI
