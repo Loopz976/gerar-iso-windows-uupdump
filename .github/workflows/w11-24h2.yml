@@ -1,4 +1,5 @@
-name: Win 11 26H2 9457 - ISO-WIM-W10UI (Todos)
+
+name: Win 11 LTSC 1742 - ISO-WIM-W10UI (Todos)
 
 on:
   workflow_dispatch:
@@ -21,6 +22,7 @@ jobs:
         rmdir /s /q D:\BASEISO 2>nul
         rmdir /s /q UUP 2>nul
         del /f /q *.iso 2>nul
+        del /f /q base.7z.* 2>nul
 
     - name: Instalar ferramentas
       shell: cmd
@@ -43,29 +45,75 @@ jobs:
           exit /b 1
         )
 
-    - name: Baixar ISO
+    - name: Baixar ISO LTSC 1742 (5 PARTES)
       shell: cmd
       run: |
-        aria2c -x16 -s16 -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.001
-        aria2c -x16 -s16 -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.002
-        aria2c -x16 -s16 -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.003
-        aria2c -x16 -s16 -o base.7z.004 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.004
-        aria2c -x16 -s16 -o base.7z.005 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-consumer-9457/w11-consumer-9457.7z.005
+        aria2c -x16 -s16 -o base.7z.001 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-ltsc-1742/w11-ltsc-1742.7z.001
+
+        aria2c -x16 -s16 -o base.7z.002 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-ltsc-1742/w11-ltsc-1742.7z.002
+
+        aria2c -x16 -s16 -o base.7z.003 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-ltsc-1742/w11-ltsc-1742.7z.003
+
+        aria2c -x16 -s16 -o base.7z.004 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-ltsc-1742/w11-ltsc-1742.7z.004
+
+        aria2c -x16 -s16 -o base.7z.005 https://github.com/Loopz976/ltsc-auto-builder/releases/download/w11-ltsc-1742/w11-ltsc-1742.7z.005
+
+    - name: Validar 5 partes
+      shell: powershell
+      run: |
+        $parts = 1..5 | ForEach-Object {
+          "base.7z.{0:D3}" -f $_
+        }
+
+        foreach ($part in $parts) {
+          if (!(Test-Path $part)) {
+            Write-Error "PARTE AUSENTE: $part"
+            exit 1
+          }
+
+          if ((Get-Item $part).Length -eq 0) {
+            Write-Error "PARTE VAZIA: $part"
+            exit 1
+          }
+        }
+
+        Write-Host "As 5 partes foram encontradas."
 
     - name: Extrair ISO
       shell: cmd
       run: |
         7z x base.7z.001 -y
 
+    - name: Localizar ISO LTSC
+      shell: powershell
+      run: |
+        $iso = Get-ChildItem -Path . -Filter *.iso -Recurse |
+          Sort-Object Length -Descending |
+          Select-Object -First 1
+
+        if (!$iso) {
+          Write-Error "ISO NÃO ENCONTRADA"
+          exit 1
+        }
+
+        Write-Host "ISO encontrada: $($iso.FullName)"
+
+        "ISO_PATH=$($iso.FullName)" >> $env:GITHUB_ENV
+
     - name: Extrair ISO para BASEISO (CURTO)
       shell: cmd
       run: |
         mkdir D:\BASEISO
-        7z x pt-br_windows_11_consumer_editions_version_26h2_x64_dvd_06ce2385.iso -oD:\BASEISO -y
+        7z x "%ISO_PATH%" -oD:\BASEISO -y
 
     - name: Validar WIM
       shell: cmd
       run: |
+        if not exist D:\BASEISO\sources\install.wim (
+          echo ERRO: INSTALL.WIM NAO ENCONTRADO
+          exit /b 1
+        )
+
         dism /Get-WimInfo /WimFile:D:\BASEISO\sources\install.wim
 
     - name: Preparar UUP
@@ -126,18 +174,26 @@ jobs:
       id: iso
       shell: powershell
       run: |
-        $iso = Get-ChildItem D:\W10UI_ISO -Filter *.iso | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $iso = Get-ChildItem D:\W10UI_ISO -Filter *.iso |
+          Sort-Object LastWriteTime -Descending |
+          Select-Object -First 1
+
+        if (!$iso) {
+          Write-Error "ISO FINAL NÃO ENCONTRADA"
+          exit 1
+        }
+
         "iso=$($iso.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     - name: Compactar
       shell: cmd
       run: |
-        7z a -tzip -v1900m W1126H29457ESDISOW10UI.7z "${{ steps.iso.outputs.iso }}"
+        7z a -tzip -v1900m W11LTSC1742W10UI.7z "${{ steps.iso.outputs.iso }}"
 
     - name: Release
       uses: ncipollo/release-action@v1
       with:
-        tag: W11-26H2-9457-W10UI-${{ github.run_number }}
-        name: Windows 11 26H2 9457 Update ESD-ISO-W10UI
-        artifacts: W1126H29457ESDISOW10UI.7z.*
+        tag: W11-LTSC-1742-W10UI-${{ github.run_number }}
+        name: Windows 11 LTSC 1742 Update ESD-ISO-W10UI
+        artifacts: W11LTSC1742W10UI.7z.*
         token: ${{ secrets.GITHUB_TOKEN }}
